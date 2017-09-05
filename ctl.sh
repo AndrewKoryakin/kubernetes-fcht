@@ -89,7 +89,7 @@ type htpasswd >/dev/null 2>&1 || { echo >&2 "I require htpasswd but it's not ins
 
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
-git clone --depth 1 https://github.com/flant/kubernetes-efk.git
+git clone --depth 1 https://github.com/qw1mb0/kubernetes-efk.git
 cd "$WORKDIR"
 
 
@@ -119,7 +119,7 @@ function install {
                  -e "s/##MEMORY_USAGE_DATA_REQUESTS##/${MEMORY_DATA^^}i/g" {} +
   if $READ_FROM_HEAD ;
   then
-    sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-es-configmap.yaml
+    sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
   fi
   $DEPLOY_SCRIPT
   echo '##################################'
@@ -154,7 +154,7 @@ function upgrade {
                  -e "s/##MEMORY_USAGE_DATA_REQUESTS##/${MEMORY_DATA^^}i/g" {} +
   if [ -z "$READ_FROM_HEAD" ];
     then 
-      sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-es-configmap.yaml
+      sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
   fi
   $DEPLOY_SCRIPT
 }
