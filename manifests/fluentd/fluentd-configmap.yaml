@@ -187,6 +187,20 @@ data:
       type kubernetes_metadata
     </filter>
 
+    <filter kubernetes.**>
+      @type record_modifier
+      <record>
+        namespace       ${kubernetes["namespace_name"]}
+        pod_name        ${kubernetes["pod_nane"]}
+        container_name  ${kubernetes["container_name"]}
+        pod_id          ${kubernetes["pod_id"]}
+        container_id    ${docker["container_id"]}
+        host            ${kubernetes["host"]}
+        timestamp       ${Time.now.to_s}
+      </record>
+      remove_keys kubernetes, docker, master_url
+    </filter>
+
     <match **>
       @type file
       path /var/log/fluent.log
