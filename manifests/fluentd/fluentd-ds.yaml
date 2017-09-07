@@ -71,7 +71,7 @@ spec:
       serviceAccountName: fluentd
       containers:
       - name: fluentd
-        image: gcr.io/google-containers/fluentd-elasticsearch:v2.0.1
+        image: flantasidorov/fluentd
         env:
         - name: FLUENTD_ARGS
           value: --no-supervisor -q
