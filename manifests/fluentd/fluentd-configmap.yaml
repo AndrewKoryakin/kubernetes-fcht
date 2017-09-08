@@ -190,16 +190,24 @@ data:
     <filter kubernetes.**>
       @type record_modifier
       <record>
-        namespace       ${kubernetes["namespace_name"]}
-        pod_name        ${kubernetes["pod_nane"]}
-        container_name  ${kubernetes["container_name"]}
-        pod_id          ${kubernetes["pod_id"]}
-        container_id    ${docker["container_id"]}
-        host            ${kubernetes["host"]}
-        timestamp       ${Time.now.to_s}
+        namespace              ${record["kubernetes"]["namespace_name"]}
+        pod_name               ${record["kubernetes"]["pod_name"]}
+        container_name         ${record["kubernetes"]["container_name"]}
+        pod_id                 ${record["kubernetes"]["pod_id"]}
+        container_id           ${record["docker"]["container_id"]}
+        host                   ${record["kubernetes"]["host"]}
+        timestamp              ${Time.now().strftime("%Y-%m-%d %H:%M:%S").to_s}
       </record>
-      remove_keys kubernetes, docker, master_url
+      remove_keys              kubernetes, docker, master_url
     </filter>
+
+    <match kubernetes.**>
+      @type exec
+      command bash /usr/local/bin/insert_ch.sh
+      buffer_path  /tmp/buffer
+      format json
+      flush_interval 10s
+    </match>
 
     <match **>
       @type file

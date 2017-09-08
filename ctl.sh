@@ -3,7 +3,7 @@
 set -ex
 
 ! read -rd '' HELP_STRING <<"EOF"
-Usage: ctl.sh [OPTION]... [-i|--install] KIBANA_HOST
+Usage: ctl.sh [OPTION]... [-i|--install] CLICKHOUSE_HOST
    or: ctl.sh [OPTION]...
 
 Install EFK (ElasticSearch, Fluentd, Kibana) stack to Kubernetes cluster.
@@ -102,21 +102,22 @@ function install {
   sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" \
               manifests/ingress/basic-auth-secret.yaml
   # install ingress host
-  sed -i -e "s/##KIBANA_HOST##/$KIBANA_HOST/g" manifests/ingress/ingress.yaml
+  #sed -i -e "s/##KIBANA_HOST##/$KIBANA_HOST/g" manifests/ingress/ingress.yaml
+  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/ingress.yaml
   # set storage parameters
-  sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" \
-         -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" \
-              manifests/es-data/es-data.yaml
+  #sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" \
+  #       -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" \
+  #            manifests/es-data/es-data.yaml
   # set memory usage
-  find manifests/ -type f -exec \
-          sed -i -e "s/##MEMORY_USAGE_CLIENT##/$MEMORY_CLIENT/g" \
-                 -e "s/##MEMORY_USAGE_MASTER##/$MEMORY_MASTER/g" \
-                 -e "s/##MEMORY_USAGE_DATA##/$MEMORY_DATA/g" {} +
+  #find manifests/ -type f -exec \
+  #        sed -i -e "s/##MEMORY_USAGE_CLIENT##/$MEMORY_CLIENT/g" \
+  #               -e "s/##MEMORY_USAGE_MASTER##/$MEMORY_MASTER/g" \
+  #               -e "s/##MEMORY_USAGE_DATA##/$MEMORY_DATA/g" {} +
   # set pod memory requests
-  find manifests/ -type f -exec \
-          sed -i -e "s/##MEMORY_USAGE_CLIENT_REQUESTS##/${MEMORY_CLIENT^^}i/g" \
-                 -e "s/##MEMORY_USAGE_MASTER_REQUESTS##/${MEMORY_MASTER^^}i/g" \
-                 -e "s/##MEMORY_USAGE_DATA_REQUESTS##/${MEMORY_DATA^^}i/g" {} +
+  #find manifests/ -type f -exec \
+  #        sed -i -e "s/##MEMORY_USAGE_CLIENT_REQUESTS##/${MEMORY_CLIENT^^}i/g" \
+  #               -e "s/##MEMORY_USAGE_MASTER_REQUESTS##/${MEMORY_MASTER^^}i/g" \
+  #               -e "s/##MEMORY_USAGE_DATA_REQUESTS##/${MEMORY_DATA^^}i/g" {} +
   if $READ_FROM_HEAD ;
   then
     sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
@@ -131,27 +132,28 @@ function install {
 function upgrade {
   PASSWORD=$(kubectl -n "$NAMESPACE" get secret basic-auth-secret -o json | jq .data.password -r | base64 -d)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
-  KIBANA_HOST=$(kubectl -n "$NAMESPACE" get ingress kibana-ingress -o json | jq -r '.spec.rules[0].host')
+  CLICKHOUSE_HOST=$(kubectl -n "$NAMESPACE" get ingress clickhouse-ingress -o json | jq -r '.spec.rules[0].host')
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
   # install basic-auth secret
   sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" \
               manifests/ingress/basic-auth-secret.yaml
   # install ingress host
-  sed -i -e "s/##KIBANA_HOST##/$KIBANA_HOST/g" manifests/ingress/ingress.yaml
+  #sed -i -e "s/##KIBANA_HOST##/$KIBANA_HOST/g" manifests/ingress/ingress.yaml
+  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/ingress.yaml
   # set storage parameters
-  sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" \
-         -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" \
-              manifests/es-data/es-data.yaml
+  #sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" \
+  #       -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" \
+  #            manifests/es-data/es-data.yaml
   # set memory usage
-  find manifests/ -type f -exec \
-          sed -i -e "s/##MEMORY_USAGE_CLIENT##/$MEMORY_CLIENT/g" \
-                 -e "s/##MEMORY_USAGE_MASTER##/$MEMORY_MASTER/g" \
-                 -e "s/##MEMORY_USAGE_DATA##/$MEMORY_DATA/g" {} +
+  #find manifests/ -type f -exec \
+  #        sed -i -e "s/##MEMORY_USAGE_CLIENT##/$MEMORY_CLIENT/g" \
+  #               -e "s/##MEMORY_USAGE_MASTER##/$MEMORY_MASTER/g" \
+  #               -e "s/##MEMORY_USAGE_DATA##/$MEMORY_DATA/g" {} +
   # set pod memory requests
-  find manifests/ -type f -exec \
-          sed -i -e "s/##MEMORY_USAGE_CLIENT_REQUESTS##/${MEMORY_CLIENT^^}i/g" \
-                 -e "s/##MEMORY_USAGE_MASTER_REQUESTS##/${MEMORY_MASTER^^}i/g" \
-                 -e "s/##MEMORY_USAGE_DATA_REQUESTS##/${MEMORY_DATA^^}i/g" {} +
+  #find manifests/ -type f -exec \
+  #        sed -i -e "s/##MEMORY_USAGE_CLIENT_REQUESTS##/${MEMORY_CLIENT^^}i/g" \
+  #               -e "s/##MEMORY_USAGE_MASTER_REQUESTS##/${MEMORY_MASTER^^}i/g" \
+  #               -e "s/##MEMORY_USAGE_DATA_REQUESTS##/${MEMORY_DATA^^}i/g" {} +
   if [ -z "$READ_FROM_HEAD" ];
     then 
       sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
@@ -162,7 +164,7 @@ function upgrade {
 if [ "$MODE" == "install" ]
 then
   if [ -z "$1" ] && [ -z "$2" ]; then echo "One positional arguments required. See '--help' for more information."; exit 1; fi
-  KIBANA_HOST="$1"
+  CLICKHOUSE_HOST="$1"
   kubectl get ns "$NAMESPACE" >/dev/null 2>&1 && FIRST_INSTALL="false"
   if [ "$FIRST_INSTALL" == "true" ]
   then

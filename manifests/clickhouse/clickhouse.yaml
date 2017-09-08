@@ -1,0 +1,53 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: clickhouse-server
+  namespace: kube-logging
+  labels:
+    component: clickhouse
+spec:
+  revisionHistoryLimit: 1
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        component: clickhouse
+    spec:
+      containers:
+      - name: clickhouse
+        image: yandex/clickhouse-server
+        ports:
+        - name: http
+          containerPort: 8123
+        - name: native
+          containerPort: 9000
+        livenessProbe:
+          timeoutSeconds: 1
+          initialDelaySeconds: 60
+          tcpSocket:
+            port: 8123
+        readinessProbe:
+          timeoutSeconds: 1
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: kube-logging
+spec:
+  selector:
+    component: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+    - name: native
+      port: 9000
+      containerPort: 9000
+      protocol: TCP

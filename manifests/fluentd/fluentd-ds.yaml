@@ -69,14 +69,32 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       serviceAccountName: fluentd
+      initContainers:
+      - name: ch-db
+        image: flantasidorov/fluentd
+        command: ["clickhouse-client", "--query='CREATE DATABASE ${CLICKHOUSE_DB};'"]
+      - name: ch-table
+        image: flantasidorov/fluentd
+        command: ["clickhouse-client", "--database=${CLICKHOUSE_DB}", "--query='CREATE TABLE ${K8S_LOG_TABLE} (log String, stream String, namespace String, pod_name String, container_name String, pod_id String, container_id String, host String, timestamp DateTime) ENGINE = Log;'"]
       containers:
       - name: fluentd
         image: flantasidorov/fluentd
+        imagePullPolicy: Always
         env:
         - name: FLUENTD_ARGS
           value: --no-supervisor -q
-        - name:  FLUENT_ELASTICSEARCH_HOST
-          value: "elasticsearch"
+        - name: CLICKHOUSE_HOST
+          value: "clickhouse"
+        - name: CLICKHOUSE_PORT
+          value: "9000"
+        - name: CLICKHOUSE_USER
+          value: "default"
+        - name: CLICKHOUSE_PASS
+          value: ""
+        - name: CLICKHOUSE_DB
+          value: "logs"
+        - name: K8S_LOG_TABLE
+          value: logs
         resources:
           limits:
             memory: 2Gi
