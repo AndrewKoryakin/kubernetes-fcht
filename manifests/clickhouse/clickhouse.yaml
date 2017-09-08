@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: clickhouse-server
   namespace: kube-logging
-  labels:
-    component: clickhouse
 spec:
   revisionHistoryLimit: 1
   replicas: 1
@@ -49,5 +47,5 @@ spec:
       protocol: TCP
     - name: native
       port: 9000
-      containerPort: 9000
+      targetPort: 9000
       protocol: TCP
