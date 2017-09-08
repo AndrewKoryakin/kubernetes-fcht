@@ -73,6 +73,7 @@ spec:
       - name: ch-db
         image: flantasidorov/fluentd
         command: ["/bin/bash", "-l", "-c", "clickhouse-client --host=${CLICKHOUSE_HOST} --port=${CLICKHOUSE_PORT} --user=${CLICKHOUSE_USER} --password=${CLICKHOUSE_PASS} --query='CREATE DATABASE ${CLICKHOUSE_DB};' || exit 0"]
+        env:
         - name: CLICKHOUSE_HOST
           value: "clickhouse"
         - name: CLICKHOUSE_PORT
@@ -88,6 +89,7 @@ spec:
       - name: ch-table
         image: flantasidorov/fluentd
         command: ["/bin/bash", "-l", "-c", "clickhouse-client --host=${CLICKHOUSE_HOST} --port=${CLICKHOUSE_PORT} --user=${CLICKHOUSE_USER} --password=${CLICKHOUSE_PASS} --database=${CLICKHOUSE_DB} --query='CREATE TABLE ${K8S_LOG_TABLE} (log String, stream String, namespace String, pod_name String, container_name String, pod_id String, container_id String, host String, timestamp DateTime) ENGINE = Log;' || exot 0"]
+        env:
         - name: CLICKHOUSE_HOST
           value: "clickhouse"
         - name: CLICKHOUSE_PORT
