@@ -72,10 +72,10 @@ spec:
       initContainers:
       - name: ch-db
         image: flantasidorov/fluentd
-        command: ["clickhouse-client", "--query='CREATE DATABASE ${CLICKHOUSE_DB};'"]
+        command: ["/bin/bash", "-l", "-c", "clickhouse-client --host=${CLICKHOUSE_HOST} --port=${CLICKHOUSE_PORT} --user=${CLICKHOUSE_USER} --password=${CLICKHOUSE_PASS} --query='CREATE DATABASE ${CLICKHOUSE_DB};' || exit 0"]
       - name: ch-table
         image: flantasidorov/fluentd
-        command: ["clickhouse-client", "--database=${CLICKHOUSE_DB}", "--query='CREATE TABLE ${K8S_LOG_TABLE} (log String, stream String, namespace String, pod_name String, container_name String, pod_id String, container_id String, host String, timestamp DateTime) ENGINE = Log;'"]
+        command: ["/bin/bash", "-l", "-c", "clickhouse-client --host=${CLICKHOUSE_HOST} --port=${CLICKHOUSE_PORT} --user=${CLICKHOUSE_USER} --password=${CLICKHOUSE_PASS} --database=${CLICKHOUSE_DB} --query='CREATE TABLE ${K8S_LOG_TABLE} (log String, stream String, namespace String, pod_name String, container_name String, pod_id String, container_id String, host String, timestamp DateTime) ENGINE = Log;' || exot 0"]
       containers:
       - name: fluentd
         image: flantasidorov/fluentd
