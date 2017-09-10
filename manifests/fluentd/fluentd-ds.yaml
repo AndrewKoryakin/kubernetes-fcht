@@ -69,39 +69,6 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       serviceAccountName: fluentd
-      initContainers:
-      - name: ch-db
-        image: flantasidorov/fluentd
-        command: ["/bin/bash", "-l", "-c", "clickhouse-client --host=${CLICKHOUSE_HOST} --port=${CLICKHOUSE_PORT} --user=${CLICKHOUSE_USER} --query='CREATE DATABASE ${CLICKHOUSE_DB};' || exit 0"]
-        env:
-        - name: CLICKHOUSE_HOST
-          value: "clickhouse"
-        - name: CLICKHOUSE_PORT
-          value: "9000"
-        - name: CLICKHOUSE_USER
-          value: "default"
-        - name: CLICKHOUSE_PASS
-          value: ""
-        - name: CLICKHOUSE_DB
-          value: "logs"
-        - name: K8S_LOG_TABLE
-          value: logs
-      - name: ch-table
-        image: flantasidorov/fluentd
-        command: ["/bin/bash", "-l", "-c", "clickhouse-client --host=${CLICKHOUSE_HOST} --port=${CLICKHOUSE_PORT} --user=${CLICKHOUSE_USER} --database=${CLICKHOUSE_DB} --query='CREATE TABLE ${K8S_LOG_TABLE} (log String, stream String, namespace String, pod_name String, container_name String, pod_id String, container_id String, host String, timestamp DateTime) ENGINE = Log;' || exot 0"]
-        env:
-        - name: CLICKHOUSE_HOST
-          value: "clickhouse"
-        - name: CLICKHOUSE_PORT
-          value: "9000"
-        - name: CLICKHOUSE_USER
-          value: "default"
-        - name: CLICKHOUSE_PASS
-          value: ""
-        - name: CLICKHOUSE_DB
-          value: "logs"
-        - name: K8S_LOG_TABLE
-          value: logs
       containers:
       - name: fluentd
         image: flantasidorov/fluentd
