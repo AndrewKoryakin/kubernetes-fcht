@@ -207,7 +207,7 @@ data:
       buffer_path  /tmp/buffer
       format json
       flush_interval 10s
-      num_threads 4
+      num_threads 1
     </match>
 
     <match **>
