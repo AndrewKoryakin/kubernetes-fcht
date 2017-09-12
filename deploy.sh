@@ -10,11 +10,14 @@ kctl() {
     kubectl --namespace "$NAMESPACE" "$@"
 }
 
+echo "Deploying Clickhouse"
+kctl apply -f manifests/clickhouse/clickhouse.yaml
+#echo "Init DB in Clickhouse"
+#kctl apply -f manifests/clickhouse/init-job.yaml
+#sleep 10
+
 echo "Deploying fluentd"
 kctl apply -f manifests/fluentd
-
-echo "Deploying clickhouse"
-kctl apply -f manifests/clickhouse
 
 echo "Deploying ingress"
 kctl apply -f manifests/ingress

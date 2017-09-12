@@ -11,6 +11,7 @@ data:
       time_format %Y-%m-%dT%H:%M:%S.%NZ
       tag kubernetes.*
       format json
+      keep_time_key true
       ##READ_FROM_HEAD_STR##
     </source>
   system.input.conf: |-
@@ -190,15 +191,16 @@ data:
     <filter kubernetes.**>
       @type record_modifier
       <record>
+        type                   "kubernetes"
         namespace              ${record["kubernetes"]["namespace_name"]}
         pod_name               ${record["kubernetes"]["pod_name"]}
         container_name         ${record["kubernetes"]["container_name"]}
         pod_id                 ${record["kubernetes"]["pod_id"]}
         container_id           ${record["docker"]["container_id"]}
         host                   ${record["kubernetes"]["host"]}
-        timestamp              ${Time.now().strftime("%Y-%m-%d %H:%M:%S").to_s}
+        timestamp              ${Time.parse(record["time"]).strftime("%Y-%m-%d %H:%M:%S").to_s}
       </record>
-      remove_keys              kubernetes, docker, master_url
+      remove_keys              kubernetes, docker, master_url, time
     </filter>
 
     <match kubernetes.**>
