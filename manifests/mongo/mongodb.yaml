@@ -1,0 +1,42 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: kube-logging
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        component: mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: mongo
+          image: mongo:2.6.10
+          command:
+            - mongod
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo
+              mountPath: /var/lib/mongodb
+      volumes:
+        - name: mongo
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: kube-logging
+spec:
+  clusterIP: None
+  selector:
+    component: mongo
+  ports:
+  - port: 27017
+    targetPort: 27017
+
