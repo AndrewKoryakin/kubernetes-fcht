@@ -10,8 +10,10 @@ kctl() {
     kubectl --namespace "$NAMESPACE" "$@"
 }
 
-echo "Deploying MoongoDB"
-kctl apply -f manifests/mongo/mongodb.yaml
+echo "Deploying PostgreSQL"
+kctl apply -f manifests/postgres/postgresql.yaml
+#echo "Deploying MoongoDB"
+#kctl apply -f manifests/mongo/mongodb.yaml
 #echo "Deploying Clickhouse"
 #kctl apply -f manifests/clickhouse/clickhouse.yaml
 #echo "Init DB in Clickhouse"

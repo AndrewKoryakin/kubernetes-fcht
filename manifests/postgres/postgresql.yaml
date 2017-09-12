@@ -1,0 +1,62 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: kube-logging
+  labels:
+    component: postgres
+spec:
+  revisionHistoryLimit: 2
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        component: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:9.6.3
+        env:
+        - name: POSTGRES_USER
+          value: "logs"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        - name: PGDATA
+          value: "/data/pg_data"
+        ports:
+        - name: postgres
+          containerPort: 5432
+        livenessProbe:
+          timeoutSeconds: 1
+          initialDelaySeconds: 30
+          tcpSocket:
+            port: 5432
+        readinessProbe:
+          timeoutSeconds: 1
+          initialDelaySeconds: 5
+          exec:
+            command: [ "/bin/sh", "-i", "-c", "psql -h 127.0.0.1 -U $POSTGRES_USER -q -d $POSTGRES_USER -c 'SELECT 1'"]
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/bash", "-l", "-c", "gosu postgres pg_ctl -m fast -w stop" ]
+        volumeMounts:
+        - name: pg-data
+          mountPath: /data
+      volumes:
+        - name: pg-data
+          emptyDir: {}
+---
+kind: Service
+metadata:
+  name: postgres
+  namespace: kube-logging
+spec:
+  selector:
+    component: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

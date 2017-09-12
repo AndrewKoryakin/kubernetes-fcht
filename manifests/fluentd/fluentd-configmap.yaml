@@ -204,13 +204,24 @@ data:
     </filter>
 
     <match kubernetes.**>
-      @type mongo
-      host mongo
-      port 27017
-      database fluentd
-      collection logs
-      flush_interval 10s
+      type pgjson
+      host postgres
+      port 5432
+      database logs
+      table fluentd
+      user logs
+      password password
+      time_col time
+      record_col record
     </match>
+    #<match kubernetes.**>
+    #  @type mongo
+    #  host mongo
+    #  port 27017
+    #  database fluentd
+    #  collection logs
+    #  flush_interval 10s
+    #</match>
     #<match kubernetes.**>
     #  @type exec
     #  command bash /usr/local/bin/insert_ch.sh

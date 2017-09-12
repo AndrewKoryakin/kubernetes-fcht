@@ -34,6 +34,8 @@ RUN BUILD_DEPS="make gcc g++ libc6-dev ruby-dev" \
                      libjemalloc1 \
                      ruby \
                      wget \
+                     libpq-dev \
+                     postgresql-server-dev-all \
     && echo 'gem: --no-document' >> /etc/gemrc \
     && gem install --file Gemfile \
     && cd /tmp \
