@@ -186,6 +186,7 @@ data:
     # Enriches records with Kubernetes metadata
     <filter kubernetes.**>
       type kubernetes_metadata
+      merge_json_log false
     </filter>
 
     <filter kubernetes.**>
@@ -230,12 +231,12 @@ data:
     <match kubernetes.**>
       @type exec
       command bash /usr/local/bin/insert_ch.sh
-      buffer_path  /tmp/buffer
+      #buffer_path  /tmp/buffer
       format json
       buffer_type memory
       buffer_chunk_limit 32m
       buffer_queue_limit 32
-      flush_interval 30s
+      flush_interval 1s
       num_threads 4
     </match>
 
