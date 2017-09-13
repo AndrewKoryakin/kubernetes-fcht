@@ -31,6 +31,12 @@ spec:
           initialDelaySeconds: 5
           tcpSocket:
             port: 8123
+        volumeMounts:
+          - name: clickhouse
+            mountPath: /var/lib/clickhouse/
+    volumes:
+      - name: clickhouse
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
