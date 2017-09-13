@@ -191,15 +191,15 @@ data:
     <filter kubernetes.**>
       @type record_modifier
       <record>
-        type                   "kubernetes"
+        date                   ${Time.parse(record["time"]).strftime("%Y-%m-%d").to_s}
+        timestamp              ${Time.parse(record["time"]).strftime("%Y-%m-%d %H:%M:%S").to_s}
+        nsec                   ${Time.parse(record["time"]).nsec}
         namespace              ${record["kubernetes"]["namespace_name"]}
+        labels.key             ${record["kubernetes"]["labels"].keys}
+        labels.value           ${record["kubernetes"]["labels"].values}
+        host                   ${record["kubernetes"]["host"]}
         pod_name               ${record["kubernetes"]["pod_name"]}
         container_name         ${record["kubernetes"]["container_name"]}
-        pod_id                 ${record["kubernetes"]["pod_id"]}
-        container_id           ${record["docker"]["container_id"]}
-        host                   ${record["kubernetes"]["host"]}
-        labels                 ${record["kubernetes"]["labels"].map{|k,v| {"key" => k, "value" => v}}}
-        timestamp              ${Time.parse(record["time"]).strftime("%Y-%m-%d %H:%M:%S").to_s}
       </record>
       remove_keys              kubernetes, docker, master_url, time
     </filter>
@@ -215,26 +215,29 @@ data:
     #  time_col time
     #  record_col record
     #</match>
+    #<match kubernetes.**>
+    #  @type mongo
+    #  host mongo
+    #  port 27017
+    #  database fluentd
+    #  collection logs
+    #  buffer_type memory
+    #  buffer_chunk_limit 32m
+    #  buffer_queue_limit 32
+    #  flush_interval 30s
+    #  num_threads 4
+    #</match>
     <match kubernetes.**>
-      @type mongo
-      host mongo
-      port 27017
-      database fluentd
-      collection logs
+      @type exec
+      command bash /usr/local/bin/insert_ch.sh
+      buffer_path  /tmp/buffer
+      format json
       buffer_type memory
       buffer_chunk_limit 32m
       buffer_queue_limit 32
       flush_interval 30s
       num_threads 4
     </match>
-    #<match kubernetes.**>
-    #  @type exec
-    #  command bash /usr/local/bin/insert_ch.sh
-    #  buffer_path  /tmp/buffer
-    #  format json
-    #  flush_interval 10s
-    #  num_threads 1
-    #</match>
 
     <match **>
       @type null
