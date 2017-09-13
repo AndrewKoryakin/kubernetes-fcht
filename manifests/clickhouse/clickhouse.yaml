@@ -34,9 +34,9 @@ spec:
         volumeMounts:
           - name: clickhouse
             mountPath: /var/lib/clickhouse/
-    volumes:
-      - name: clickhouse
-        emptyDir: {}
+      volumes:
+        - name: clickhouse
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
