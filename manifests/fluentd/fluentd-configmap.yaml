@@ -198,6 +198,7 @@ data:
         pod_id                 ${record["kubernetes"]["pod_id"]}
         container_id           ${record["docker"]["container_id"]}
         host                   ${record["kubernetes"]["host"]}
+        labels                 ${record["kubernetes"]["labels"].map{|k,v| {"key" => k, "value" => v}}}}
         timestamp              ${Time.parse(record["time"]).strftime("%Y-%m-%d %H:%M:%S").to_s}
       </record>
       remove_keys              kubernetes, docker, master_url, time
