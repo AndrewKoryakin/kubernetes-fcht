@@ -1,0 +1,42 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: kube-logging
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        component: mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: percona-mongo
+          image: percona/percona-server-mongodb:3.4
+          command: ["mongod"]
+          args: ["--storageEngine=RocksDB", "--rocksdbCacheSizeGB=1", "--rocksdbCompression=lz4hc"
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo
+              mountPath: /data/db
+      volumes:
+        - name: mongo
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: kube-logging
+spec:
+  clusterIP: None
+  selector:
+    component: mongo
+  ports:
+  - port: 27017
+    targetPort: 27017
+
