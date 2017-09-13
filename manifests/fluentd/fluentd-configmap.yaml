@@ -221,7 +221,7 @@ data:
       database fluentd
       collection logs
       buffer_type memory
-      buffer_chunck_limit 32m
+      buffer_chunk_limit 32m
       buffer_queue_limit 32
       flush_interval 30s
       num_threads 4
