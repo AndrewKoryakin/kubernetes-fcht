@@ -220,7 +220,11 @@ data:
       port 27017
       database fluentd
       collection logs
-      flush_interval 10s
+      buffer_type memory
+      buffer_chunck_limit 8m
+      buffer_queue_limit 32
+      flush_interval 30s
+      num_threads 2
     </match>
     #<match kubernetes.**>
     #  @type exec
