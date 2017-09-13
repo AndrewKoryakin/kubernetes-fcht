@@ -12,7 +12,7 @@ data:
       tag kubernetes.*
       format json
       keep_time_key true
-      ##READ_FROM_HEAD_STR##
+      read_from_head true
     </source>
   system.input.conf: |-
     # Examples:
@@ -131,7 +131,7 @@ data:
       type systemd
       filters [{ "_SYSTEMD_UNIT": "docker.service" }]
       pos_file /var/log/gcp-journald-docker.pos
-      ##READ_FROM_HEAD_STR##
+      read_from_head true
       tag docker
     </source>
 
@@ -139,7 +139,7 @@ data:
       type systemd
       filters [{ "_SYSTEMD_UNIT": "kubelet.service" }]
       pos_file /var/log/gcp-journald-kubelet.pos
-      ##READ_FROM_HEAD_STR##
+      read_from_head true
       tag kubelet
     </source>
 
@@ -198,7 +198,7 @@ data:
         pod_id                 ${record["kubernetes"]["pod_id"]}
         container_id           ${record["docker"]["container_id"]}
         host                   ${record["kubernetes"]["host"]}
-        labels                 ${record["kubernetes"]["labels"].map{|k,v| {"key" => k, "value" => v}}}}
+        labels                 ${record["kubernetes"]["labels"].map{|k,v| {"key" => k, "value" => v}}}
         timestamp              ${Time.parse(record["time"]).strftime("%Y-%m-%d %H:%M:%S").to_s}
       </record>
       remove_keys              kubernetes, docker, master_url, time
