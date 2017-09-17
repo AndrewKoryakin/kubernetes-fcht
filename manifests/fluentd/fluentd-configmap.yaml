@@ -192,9 +192,9 @@ data:
     <filter kubernetes.**>
       @type record_modifier
       <record>
-        date                   ${Time.parse(record["time"]).strftime("%Y-%m-%d").to_s}
-        timestamp              ${Time.parse(record["time"]).strftime("%Y-%m-%d %H:%M:%S").to_s}
-        nsec                   ${Time.parse(record["time"]).nsec}
+        date                   ${Time.at(time).strftime("%Y-%m-%d")}
+        timestamp              ${Time.at(time).strftime("%Y-%m-%d %H:%M:%S")}
+        nsec                   ${record["time"].split('.').last.to_i}
         namespace              ${record["kubernetes"]["namespace_name"]}
         labels.key             ${record["kubernetes"]["labels"].keys}
         labels.value           ${record["kubernetes"]["labels"].values}
