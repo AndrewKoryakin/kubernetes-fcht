@@ -3,7 +3,7 @@
 set -ex
 
 ! read -rd '' HELP_STRING <<"EOF"
-Usage: ctl.sh [OPTION]... [-i|--install] TABIX_HOST CLICKHOUSE_HOST
+Usage: ctl.sh [OPTION]... [-i|--install] KUBE_HOST
    or: ctl.sh [OPTION]...
 
 Install FCHT (Fluentd, ClickHouse, Tabix) stack to Kubernetes cluster.
@@ -93,7 +93,9 @@ function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
-  CLICKHOUSE_PASSWORD=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-'
+  CLICKHOUSE_PASSWORD=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-')
+  CLICKHOUSE_HOST="clickhouse$KUBE_HOST"
+  TABIX_HOST="tabix$KUBE_HOST"
   # install basic-auth secret
   sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" \
               manifests/ingress/basic-auth-secret.yaml
