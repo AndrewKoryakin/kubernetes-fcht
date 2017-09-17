@@ -13,8 +13,9 @@ kctl() {
 if [ -n "$STORAGE_NAMESPACE" ] ;
 then
   STORAGECLASS_USER_SECRET_NAME=$(kctl get storageclass $STORAGE_CLASS_NAME -o json | jq '.parameters.userSecretName' | tr -d '"')
-  STORAGECLASS_USER_SECRET_VALUE=$(kctl get secret $STORAGECLASS_USER_SECRET_NAME -o json | jq '.data.key' | tr -d '"')
-  sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRE_NAME/" -e "s/##STORAGECLASS_USER_SECRET_VALUE##/STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
+  STORAGECLASS_USER_SECRET_VALUE=$(kubectl -n $STORAGE_NAMESPACE get secret $STORAGECLASS_USER_SECRET_NAME -o json | jq '.data.key' | tr -d '"')
+  sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRE_NAME/" manifests/clickhouse/storage_secret.yaml
+  sed -i -e "s/##STORAGECLASS_USER_SECRET_VALUE##/$STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
   echo "Deploying storageclass secret"
   kctl apply -f manifests/clickhouse/storage_secret.yaml
 fi
