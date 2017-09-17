@@ -10,7 +10,7 @@ kctl() {
     kubectl --namespace "$NAMESPACE" "$@"
 }
 
-if $STORAGE_NAMESPACE ;
+if [ -n "$STORAGE_NAMESPACE" ] ;
 then
   STORAGECLASS_USER_SECRET_NAME=$(kctl get storageclass $STORAGE_CLASS_NAME -o json | jq '.parameters.userSecretName')
   STORAGECLASS_USER_SECRET_VALUE=$(kctl get secret $STORAGECLASS_USER_SECRET_NAME -o json | jq '.data.key')
