@@ -192,8 +192,9 @@ data:
     <filter kubernetes.**>
       @type record_modifier
       <record>
-        date                   ${Time.at(time).strftime("%Y-%m-%d")}
-        timestamp              ${Time.at(time).strftime("%Y-%m-%d %H:%M:%S")}
+        _json_log_ ${ log = record["log"].strip; if log[0].eql?('{') && log[-1].eql?('}'); begin; JSON.parse(log); rescue JSON::ParserError; end; end }
+	tag 		       ${tag}
+	timestamp              ${time}
         nsec                   ${record["time"].split('.').last.to_i}
         namespace              ${record["kubernetes"]["namespace_name"]}
         labels.key             ${record["kubernetes"]["labels"].keys}
@@ -201,37 +202,15 @@ data:
         host                   ${record["kubernetes"]["host"]}
         pod_name               ${record["kubernetes"]["pod_name"]}
         container_name         ${record["kubernetes"]["container_name"]}
+        logs.key               ${record["_json_log_"] ? record["_json_log_"].keys : ["log"]}
+        logs.value             ${record["_json_log_"] ? record["_json_log_"].values.map(&:to_s) : [record["log"]]}
       </record>
-      remove_keys              kubernetes, docker, master_url, time
+      remove_keys              kubernetes, docker, master_url, time, _json_log_, log, tag
     </filter>
 
-    #<match kubernetes.**>
-    #  type pgjson
-    #  host postgres
-    #  port 5432
-    #  database logs
-    #  table fluentd
-    #  user logs
-    #  password password
-    #  time_col time
-    #  record_col record
-    #</match>
-    #<match kubernetes.**>
-    #  @type mongo
-    #  host mongo
-    #  port 27017
-    #  database fluentd
-    #  collection logs
-    #  buffer_type memory
-    #  buffer_chunk_limit 32m
-    #  buffer_queue_limit 32
-    #  flush_interval 30s
-    #  num_threads 4
-    #</match>
     <match kubernetes.**>
       @type exec
       command bash /usr/local/bin/insert_ch.sh
-      #buffer_path  /tmp/buffer
       format json
       buffer_type memory
       buffer_chunk_limit 32m
