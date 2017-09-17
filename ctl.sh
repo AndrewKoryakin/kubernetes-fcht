@@ -3,10 +3,10 @@
 set -ex
 
 ! read -rd '' HELP_STRING <<"EOF"
-Usage: ctl.sh [OPTION]... [-i|--install] CLICKHOUSE_HOST
+Usage: ctl.sh [OPTION]... [-i|--install] TABIX_HOST CLICKHOUSE_HOST
    or: ctl.sh [OPTION]...
 
-Install FCH (Fluentd, ClickHouse) stack to Kubernetes cluster.
+Install FCHT (Fluentd, ClickHouse, Tabix) stack to Kubernetes cluster.
 
 Mandatory arguments:
   -i, --install                install into 'kube-logging' namespace, override with '-n' option
@@ -14,15 +14,19 @@ Mandatory arguments:
   -d, --delete                 remove everything, including the namespace
 
 Optional arguments:
-  --read-from-head             set fluentds option 'read_from_head true'
+  --clickhouse-pass            set clickhouse default user password
+  --clickhouse-db              set clickhouse DB name for collecting logs
+  --storage-class-name         name of the storage class
+  --storage-size               storage size with optional IEC suffix
+  --storage-namespace          set name of namespace from what copy secret
 
 Optional arguments:
   -h, --help                   output this message
 EOF
 
 RANDOM_NUMBER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
-TMP_DIR="/tmp/prometheus-ctl-$RANDOM_NUMBER"
-WORKDIR="$TMP_DIR/kubernetes-efk"
+TMP_DIR="/tmp/fcht-ctl-$RANDOM_NUMBER"
+WORKDIR="$TMP_DIR/kubernetes-fcth"
 DEPLOY_SCRIPT="./deploy.sh"
 TEARDOWN_SCRIPT="./teardown.sh"
 
@@ -32,10 +36,11 @@ NAMESPACE="kube-logging"
 FIRST_INSTALL="true"
 STORAGE_CLASS_NAME="rbd"
 STORAGE_SIZE="20Gi"
-READ_FROM_HEAD_STR='read_from_head true'
+CLICKHOUSE_PASS="default"
+CLICKHOUSE_DB="logs"
+K8S_LOGS_TABLE="logs"
 
-
-TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,memory-usage-client:,memory-usage-master:,memory-usage-data:,read-from-head \
+TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,clickhouse-pass:,clickhouse-db:,storage-namespace: \
              -n 'ctl' -- "$@")
 
 eval set -- "$TEMP"
@@ -52,14 +57,12 @@ while true; do
       STORAGE_CLASS_NAME="$2"; shift 2;;
     --storage-size )
       STORAGE_SIZE="$2"; shift 2;;
-    --memory-usage-client )
-      MEMORY_CLIENT="$2"; shift 2;;
-    --memory-usage-master )
-      MEMORY_MASTER="$2"; shift 2;;
-    --memory-usage-data )
-      MEMORY_DATA="$2"; shift 2;;
-    --read-from-head )
-      READ_FROM_HEAD=true ; shift ;;
+    --clickhouse-pass )
+      CLICKHOUSE_PASS="$2"; shift 2;;
+    --clickhouse-db )
+      CLICKHOUSE_DB="$2"; shift 2;;
+    --storage-namespace )
+      STORAGE_NAMESPACE="$2"; shift 2;;
     -h | --help )
       echo "$HELP_STRING"; exit 0 ;;
     -- )
@@ -77,11 +80,12 @@ type git >/dev/null 2>&1 || { echo >&2 "I require git but it's not installed.  A
 type kubectl >/dev/null 2>&1 || { echo >&2 "I require kubectl but it's not installed.  Aborting."; exit 1; }
 type jq >/dev/null 2>&1 || { echo >&2 "I require jq but it's not installed.  Aborting."; exit 1; }
 type htpasswd >/dev/null 2>&1 || { echo >&2 "I require htpasswd but it's not installed. Please, install 'apache2-utils'. Aborting."; exit 1; }
+type sha256sum >/dev/null 2>&1 || { echo >&2 "I require sha256sum but it's not installed. Aborting."; exit 1; }
 
 
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
-git clone --depth 1 https://github.com/qw1mb0/kubernetes-efk.git
+git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
 cd "$WORKDIR"
 
 
@@ -89,15 +93,25 @@ function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
-
+  CLICKHOUSE_PASSWORD=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-'
   # install basic-auth secret
   sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" \
               manifests/ingress/basic-auth-secret.yaml
   # install ingress host
-  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/ingress.yaml
-  if $READ_FROM_HEAD ;
+  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
+  sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
+  # set storage for clickhouse
+  sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
+  # set clickhouse password
+  sed -i -e "s/##CLICKHOUSE_PASSWORD##/$CLICKHOUSE_PASSWORD/g" manifests/clickhouse/clickhouse-configmap.yaml
+  if $STORAGE_NAMESPACE ;
   then
-    sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
+    export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
+    export STORAGE_CLASS_NAME=$STORAGE_CLASS_NAME
   fi
   $DEPLOY_SCRIPT
   echo '##################################'
@@ -125,8 +139,9 @@ function upgrade {
 
 if [ "$MODE" == "install" ]
 then
-  if [ -z "$1" ] && [ -z "$2" ]; then echo "One positional arguments required. See '--help' for more information."; exit 1; fi
-  CLICKHOUSE_HOST="$1"
+  if [ -z "$1" ] && [ -z "$2" ]; then echo "Two positional arguments required. See '--help' for more information."; exit 1; fi
+  TABIX_HOST="$1"
+  CLICKHOUSE_HOST="$2"
   kubectl get ns "$NAMESPACE" >/dev/null 2>&1 && FIRST_INSTALL="false"
   if [ "$FIRST_INSTALL" == "true" ]
   then

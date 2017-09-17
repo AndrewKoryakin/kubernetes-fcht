@@ -10,20 +10,25 @@ kctl() {
     kubectl --namespace "$NAMESPACE" "$@"
 }
 
-#echo "Deploying PostgreSQL"
-#kctl apply -f manifests/postgres/postgresql.yaml
-#echo "Deploying MoongoDB"
-#kctl apply -f manifests/mongo/mongodb.yaml
-#echo "Deploying Percona MongoDB"
-#kctl apply -f manifests/mongo/percona-mongodb.yaml
-#echo "Deploying Clickhouse"
-#kctl apply -f manifests/clickhouse/clickhouse.yaml
-#echo "Init DB in Clickhouse"
-#kctl apply -f manifests/clickhouse/init-job.yaml
-#sleep 10
+if $STORAGE_NAMESPACE ;
+then
+  STORAGECLASS_USER_SECRET_NAME=$(kctl get storageclass $STORAGE_CLASS_NAME -o json | jq '.parameters.userSecretName')
+  STORAGECLASS_USER_SECRET_VALUE=$(kctl get secret $STORAGECLASS_USER_SECRET_NAME -o json | jq '.data.key')
+  sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRE_NAME/" -e "s/##STORAGECLASS_USER_SECRET_VALUE##/STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
+  echo "Deploying storageclass secret"
+  kctl apply -f manifests/clickhouse/storage_secret.yaml
+fi
 
-echo "Deploying fluentd"
-kctl apply -f manifests/fluentd
+echo "Deploying Clickhouse"
+kctl apply -f manifests/clickhouse/clickhouse.yaml
+echo "Waiting for clickhouse up"
+until kctl get pod | grep clickhouse-server | grep Running > /dev/null 2>&1; do sleep 1; printf "."; done
 
-echo "Deploying ingress"
-kctl apply -f manifests/ingress
+echo "Create database and table"
+kctl exec $(kctl get pod | grep clickhouse-server | awk '{print $1}') /usr/local/bin/init.sh 
+
+#echo "Deploying fluentd"
+#kctl apply -f manifests/fluentd
+
+#echo "Deploying ingress"
+#kctl apply -f manifests/ingress

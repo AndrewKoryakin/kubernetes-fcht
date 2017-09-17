@@ -26,18 +26,6 @@ data:
       tag docker
     </source>
 
-    # Example:
-    # 2016/02/04 06:52:38 filePurge: successfully removed file /var/etcd/data/member/wal/00000000000006d0-00000000010a23d1.wal
-    <source>
-      type tail
-      # Not parsing this, because it doesn't have anything particularly useful to
-      # parse out of it (like severities).
-      format none
-      path /var/log/etcd.log
-      pos_file /var/log/etcd.log.pos
-      tag etcd
-    </source>
-
     # Multi-line parsing is required for all the kube logs because very large log
     # statements, such as those that include entire object bodies, get split into
     # multiple lines by glog.
@@ -54,76 +42,6 @@ data:
       path /var/log/kubelet.log
       pos_file /var/log/kubelet.log.pos
       tag kubelet
-    </source>
-
-    # Example:
-    # I1118 21:26:53.975789       6 proxier.go:1096] Port "nodePort for kube-system/default-http-backend:http" (:31429/tcp) was open before and is still needed
-    <source>
-      type tail
-      format multiline
-      multiline_flush_interval 5s
-      format_firstline /^\w\d{4}/
-      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
-      time_format %m%d %H:%M:%S.%N
-      path /var/log/kube-proxy.log
-      pos_file /var/log/kube-proxy.log.pos
-      tag kube-proxy
-    </source>
-
-    # Example:
-    # I0204 07:00:19.604280       5 handlers.go:131] GET /api/v1/nodes: (1.624207ms) 200 [[kube-controller-manager/v1.1.3 (linux/amd64) kubernetes/6a81b50] 127.0.0.1:38266]
-    <source>
-      type tail
-      format multiline
-      multiline_flush_interval 5s
-      format_firstline /^\w\d{4}/
-      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
-      time_format %m%d %H:%M:%S.%N
-      path /var/log/kube-apiserver.log
-      pos_file /var/log/kube-apiserver.log.pos
-      tag kube-apiserver
-    </source>
-
-    # Example:
-    # I0204 06:55:31.872680       5 servicecontroller.go:277] LB already exists and doesn't need update for service kube-system/kube-ui
-    <source>
-      type tail
-      format multiline
-      multiline_flush_interval 5s
-      format_firstline /^\w\d{4}/
-      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
-      time_format %m%d %H:%M:%S.%N
-      path /var/log/kube-controller-manager.log
-      pos_file /var/log/kube-controller-manager.log.pos
-      tag kube-controller-manager
-    </source>
-
-    # Example:
-    # W0204 06:49:18.239674       7 reflector.go:245] pkg/scheduler/factory/factory.go:193: watch of *api.Service ended with: 401: The event in requested index is outdated and cleared (the requested history has been cleared [2578313/2577886]) [2579312]
-    <source>
-      type tail
-      format multiline
-      multiline_flush_interval 5s
-      format_firstline /^\w\d{4}/
-      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
-      time_format %m%d %H:%M:%S.%N
-      path /var/log/kube-scheduler.log
-      pos_file /var/log/kube-scheduler.log.pos
-      tag kube-scheduler
-    </source>
-
-    # Example:
-    # I1104 10:36:20.242766       5 rescheduler.go:73] Running Rescheduler
-    <source>
-      type tail
-      format multiline
-      multiline_flush_interval 5s
-      format_firstline /^\w\d{4}/
-      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
-      time_format %m%d %H:%M:%S.%N
-      path /var/log/rescheduler.log
-      pos_file /var/log/rescheduler.log.pos
-      tag rescheduler
     </source>
 
     # Logs from systemd-journal for interesting services.
@@ -192,9 +110,8 @@ data:
     <filter kubernetes.**>
       @type record_modifier
       <record>
-        _json_log_ ${ log = record["log"].strip; if log[0].eql?('{') && log[-1].eql?('}'); begin; JSON.parse(log); rescue JSON::ParserError; end; end }
-	tag 		       ${tag}
-	timestamp              ${time}
+        _json_log_             ${ log = record["log"].strip; if log[0].eql?('{') && log[-1].eql?('}'); begin; JSON.parse(log); rescue JSON::ParserError; end; end }
+        timestamp              ${time}
         nsec                   ${record["time"].split('.').last.to_i}
         namespace              ${record["kubernetes"]["namespace_name"]}
         labels.key             ${record["kubernetes"]["labels"].keys}
@@ -205,10 +122,34 @@ data:
         logs.key               ${record["_json_log_"] ? record["_json_log_"].keys : ["log"]}
         logs.value             ${record["_json_log_"] ? record["_json_log_"].values.map(&:to_s) : [record["log"]]}
       </record>
-      remove_keys              kubernetes, docker, master_url, time, _json_log_, log, tag
+      whitelist_keys           tag
     </filter>
 
-    <match kubernetes.**>
+    <filter docker.**>
+      @type record_modifier
+      <record>
+        timestamp              ${time}
+        nsec                   ${record["time"].split('.'.last.to_i}
+        host                   "#{Socket.gethostname}"
+        logs.key               ${["level", "msg", "err", "statusCode"]}
+        logs.value             ${[record["level"], record["msg"], record["err"], record["statusCode"]]}
+      </record>
+      whitelist_keys           tag
+    </filter>
+
+    <filter kubelet.**>
+      @type record_modifier
+      <record>
+        timestamp              ${time}
+        nsec                   ${record["time"].split('.'.last.to_i}
+        host                   "#{Socket.gethostname}"
+        logs.key               ${["_TRANSPORT", "PRIORITY", "SYSLOG_FACILITY", "SYSLOG_IDENTIFIER", "_PID", "_UID", "_GID", "_COMM", "_EXE", "_CMDLINE", "_CAP_EFFECTIVE", "_SYSTEMD_CGROUP", "_SYSTEMD_UNIT", "_SYSTEMD_SLICE", "_BOOT_ID", "_MACHINE_ID", "_HOSTNAME", "MESSAGE"]}
+        logs.value             ${[record["_TRANSPORT"], record["PRIORITY"], record["SYSLOG_FACILITY"], record["SYSLOG_IDENTIFIER"], record["_PID"], record["_UID"], record["_GID"], record["_COMM"], record["_EXE"], record["_CMDLINE"], record["_CAP_EFFECTIVE"], record["_SYSTEMD_CGROUP"], record["_SYSTEMD_UNIT"], record["_SYSTEMD_SLICE"], record["_BOOT_ID"], record["_MACHINE_ID"], record["_HOSTNAME"], record["MESSAGE"]]}
+      </record>
+      whitelist_keys           tag
+    </filter>
+
+    <match **>
       @type exec
       command bash /usr/local/bin/insert_ch.sh
       format json
@@ -217,11 +158,6 @@ data:
       buffer_queue_limit 32
       flush_interval 1s
       num_threads 4
-    </match>
-
-    <match **>
-      @type null
-      #path /var/log/fluent.log
     </match>
 metadata:
   name: fluentd-config-v0.1.0

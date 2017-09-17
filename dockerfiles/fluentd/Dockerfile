@@ -23,6 +23,8 @@ FROM ubuntu:16.04
 COPY clean-apt /usr/bin
 COPY clean-install /usr/bin
 COPY Gemfile /Gemfile
+ARG repository="deb http://repo.yandex.ru/clickhouse/xenial stable main"
+ARG version=\*
 
 # 1. Install & configure dependencies.
 # 2. Install fluentd via ruby.
@@ -34,22 +36,18 @@ RUN BUILD_DEPS="make gcc g++ libc6-dev ruby-dev" \
                      libjemalloc1 \
                      ruby \
                      wget \
-                     libpq-dev \
-                     postgresql-server-dev-all \
-                     postgresql-client \
     && echo 'gem: --no-document' >> /etc/gemrc \
     && gem install --file Gemfile \
     && cd /tmp \
-    && wget http://repo.yandex.ru/clickhouse/xenial/pool/main/c/clickhouse/clickhouse-server-base_1.1.54288_amd64.deb \
-    && wget http://repo.yandex.ru/clickhouse/xenial/pool/main/c/clickhouse/clickhouse-client_1.1.54288_amd64.deb \
-    && dpkg -i /tmp/clickhouse-server-base_1.1.54288_amd64.deb\
-    && dpkg -i clickhouse-client_1.1.54288_amd64.deb \
+    && echo $repository | tee /etc/apt/sources.list.d/clickhouse.list \
+    && apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 \
     && apt-get update \
-    && apt-get install tzdata \
+    && apt-get install tzdata clickhouse-server-base=$version clickhouse-client=$version \
     && apt-get purge -y --auto-remove \
                      -o APT::AutoRemove::RecommendsImportant=false \
                      $BUILD_DEPS \
     && clean-apt \
+    && rm -rf /var/lib/apt/lists/* \
     # Ensure fluent has enough file descriptors
     && ulimit -n 65536
 

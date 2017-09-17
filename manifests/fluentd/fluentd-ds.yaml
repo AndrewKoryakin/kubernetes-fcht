@@ -71,23 +71,23 @@ spec:
       serviceAccountName: fluentd
       containers:
       - name: fluentd
-        image: flantasidorov/fluentd
+        image: wimbo/fluentd
         imagePullPolicy: Always
         env:
         - name: FLUENTD_ARGS
           value: --no-supervisor -q
-        - name: CLICKHOUSE_HOST
+        - name: CLICKHOUSE_SERVER
           value: "clickhouse"
         - name: CLICKHOUSE_PORT
           value: "9000"
         - name: CLICKHOUSE_USER
-          value: "default"
+          value: "##CLICKHOUSE_USER##"
         - name: CLICKHOUSE_PASS
-          value: ""
+          value: "##CLICKHOUSE_PASS##"
         - name: CLICKHOUSE_DB
-          value: "logs"
+          value: "##CLICKHOUSE_DB##"
         - name: K8S_LOG_TABLE
-          value: logs
+          value: "##K8S_LOG_TABLE##"
         resources:
           limits:
             memory: 2Gi

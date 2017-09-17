@@ -1,11 +1,3 @@
-apiVersion: v1
-data:
-  key: QVFCZXc0QlpVS0E3QlJBQVU3eHp3THo3dTJKY0RKZHdWYzFwT1E9PQ==
-kind: Secret
-type: kubernetes.io/rbd
-metadata:
-  name: ceph-secret-kube
-  namespace: kube-logging
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -19,8 +11,8 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi
-  storageClassName: rbd
+      storage: ##STORAGE_SIZE##
+  storageClassName: ##STORAGE_CLASS_NAME##
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -52,6 +44,19 @@ spec:
           containerPort: 8123
         - name: native
           containerPort: 9000
+        env:
+        - name: CLICKHOUSE_SERVER
+          value: "clickhouse"
+        - name: CLICKHOUSE_PORT
+          value: "9000"
+        - name: CLICKHOUSE_USER
+          value: "default"
+        - name: CLICKHOUSE_PASS
+          value: "##CLICKHOUSE_PASS##"
+        - name: CLICKHOUSE_DB
+          value: "##CLICKHOUSE_DB##"
+        - name: K8S_LOGS_TABLE
+          value: "##K8S_LOGS_TABLE##"
         livenessProbe:
           timeoutSeconds: 1
           initialDelaySeconds: 60
@@ -70,10 +75,15 @@ spec:
         volumeMounts:
           - name: clickhouse
             mountPath: /var/lib/clickhouse/
+          - name: config-volume
+            mountPath: /etc/clickhouse-server
       volumes:
         - name: clickhouse
           persistentVolumeClaim:
             claimName: clickhouse
+        - name: config-volume
+          configMap:
+            name: clickhouse-config
 ---
 apiVersion: v1
 kind: Service
@@ -92,25 +102,3 @@ spec:
       port: 9000
       targetPort: 9000
       protocol: TCP
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: clickhouse
-  namespace: kube-logging
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
-    kubernetes.io/tls-acme: "true"
-spec:
-  rules:
-  - host: ch.kube.allabout.me
-    http:
-      paths:
-      - path: /
-        backend:
-          serviceName: clickhouse
-          servicePort: http
-  tls:
-  - hosts:
-    - ch.kube.allabout.me
-    secretName: clickhouse
