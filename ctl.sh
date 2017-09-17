@@ -26,7 +26,7 @@ EOF
 
 RANDOM_NUMBER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
 TMP_DIR="/tmp/fcht-ctl-$RANDOM_NUMBER"
-WORKDIR="$TMP_DIR/kubernetes-fcth"
+WORKDIR="$TMP_DIR/kubernetes-fcht"
 DEPLOY_SCRIPT="./deploy.sh"
 TEARDOWN_SCRIPT="./teardown.sh"
 
