@@ -22,6 +22,7 @@ then
 fi
 
 echo "Deploying Clickhouse"
+kctl apply -f manifests/clickhouse/clickhouse-configmap.yaml
 kctl apply -f manifests/clickhouse/clickhouse.yaml
 echo "Waiting for clickhouse up"
 until kctl get pod | grep clickhouse-server | grep Running > /dev/null 2>&1; do sleep 1; printf "."; done
