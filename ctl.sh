@@ -93,7 +93,7 @@ function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
-  CLICKHOUSE_PASSWORD=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-')
+  CLICKHOUSE_PASSWORD=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-' | tr -d ' ')
   CLICKHOUSE_HOST="clickhouse$KUBE_HOST"
   TABIX_HOST="tabix$KUBE_HOST"
   # install basic-auth secret
