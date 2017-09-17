@@ -110,7 +110,7 @@ function install {
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
   # set clickhouse password
   sed -i -e "s/##CLICKHOUSE_PASSWORD##/$CLICKHOUSE_PASSWORD/g" manifests/clickhouse/clickhouse-configmap.yaml
-  if $STORAGE_NAMESPACE ;
+  if [ -n "$STORAGE_NAMESPACE" ] ;
   then
     export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
     export STORAGE_CLASS_NAME=$STORAGE_CLASS_NAME
