@@ -30,8 +30,8 @@ until kctl get pod | grep clickhouse-server | grep Running > /dev/null 2>&1; do 
 echo "Create database and table"
 kctl exec $(kctl get pod | grep clickhouse-server | awk '{print $1}') /usr/local/bin/init.sh 
 
-#echo "Deploying fluentd"
-#kctl apply -f manifests/fluentd
+echo "Deploying fluentd"
+kctl apply -f manifests/fluentd
 
 #echo "Deploying ingress"
 #kctl apply -f manifests/ingress

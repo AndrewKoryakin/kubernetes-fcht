@@ -124,9 +124,9 @@ data:
         boolean_fields.values  ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(TrueClass) || v.is_a?(FalseClass)}.values.map{|v| v ? 1 : 0} : []}
 
         null_fields.names      ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.nil?}.keys : []}
-    </record>
-    remove_keys kubernetes, docker, master_url, time, stream, log, _json_log_
-  </filter>
+      </record>
+      remove_keys kubernetes, docker, master_url, time, stream, log, _json_log_
+     </filter>
 
     <filter docker.**>
       @type record_modifier
@@ -167,3 +167,4 @@ metadata:
   namespace: kube-logging
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
+
