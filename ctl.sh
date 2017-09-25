@@ -107,10 +107,14 @@ function install {
   sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
   # set clickhouse password
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASSWORD/g" manifests/clickhouse/clickhouse-configmap.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASSWORD/g" manifests/fluentd/fluentd-ds.yaml
   if [ -n "$STORAGE_NAMESPACE" ] ;
   then
     export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
@@ -142,9 +146,8 @@ function upgrade {
 
 if [ "$MODE" == "install" ]
 then
-  if [ -z "$1" ] && [ -z "$2" ]; then echo "Two positional arguments required. See '--help' for more information."; exit 1; fi
-  TABIX_HOST="$1"
-  CLICKHOUSE_HOST="$2"
+  KUBE_HOST="$1"
+  if [ ! "$KUBE_HOST" ] ; then echo "KUBE_HOST arguments required. See '--help' for more information."; exit 1; fi
   kubectl get ns "$NAMESPACE" >/dev/null 2>&1 && FIRST_INSTALL="false"
   if [ "$FIRST_INSTALL" == "true" ]
   then
@@ -166,3 +169,4 @@ function cleanup {
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
+
