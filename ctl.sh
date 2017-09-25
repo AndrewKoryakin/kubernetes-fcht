@@ -83,11 +83,12 @@ type htpasswd >/dev/null 2>&1 || { echo >&2 "I require htpasswd but it's not ins
 type sha256sum >/dev/null 2>&1 || { echo >&2 "I require sha256sum but it's not installed. Aborting."; exit 1; }
 
 
+SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
-git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
+#git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
+cp -r ${SRC_DIR} ${TMP_DIR} 
 cd "$WORKDIR"
-
 
 function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
