@@ -33,5 +33,8 @@ kctl exec $(kctl get pod | grep clickhouse-server | awk '{print $1}') /usr/local
 echo "Deploying fluentd"
 kctl apply -f manifests/fluentd
 
-#echo "Deploying ingress"
-#kctl apply -f manifests/ingress
+echo "Deploying fluentd"
+kctl apply -f manifests/tabix
+
+echo "Deploying ingress"
+kctl apply -f manifests/ingress
