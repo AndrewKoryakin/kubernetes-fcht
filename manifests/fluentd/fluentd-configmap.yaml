@@ -113,23 +113,26 @@ data:
         _json_log_             ${ log = record["log"].strip; if log[0].eql?('{') && log[-1].eql?('}'); begin; JSON.parse(log); rescue JSON::ParserError; end; end }
         timestamp              ${time}
         nsec                   ${record["time"].split('.').last.to_i}
-        namespace              ${record["kubernetes"]["namespace_name"]}
-        labels.key             ${record["kubernetes"]["labels"].keys}
-        labels.value           ${record["kubernetes"]["labels"].values}
-        host                   ${record["kubernetes"]["host"]}
-        pod_name               ${record["kubernetes"]["pod_name"]}
-        container_name         ${record["kubernetes"]["container_name"]}
-        logs.key               ${record["_json_log_"] ? record["_json_log_"].keys : ["log"]}
-        logs.value             ${record["_json_log_"] ? record["_json_log_"].values.map(&:to_s) : [record["log"]]}
-      </record>
-      whitelist_keys           tag
-    </filter>
+
+        string_fields.names    ${["namespace", "host", "pod_name", "container_name", "stream"] + record["kubernetes"]["labels"].keys.map{|k| "label." + k} + (record["_json_log_"] ? record["_json_log_"].select{|_, v| !v.nil? && !v.is_a?(Numeric) && !v.is_a?(TrueClass) && !v.is_a?(FalseClass)}.keys : ["log"])}
+        string_fields.values   ${[record["kubernetes"]["namespace_name"], record["kubernetes"]["host"], record["kubernetes"]["pod_name"], record["kubernetes"]["container_name"], record["stream"]] + record["kubernetes"]["labels"].values + (record["_json_log_"] ? record["_json_log_"].select{|_, v| !v.nil? && !v.is_a?(Numeric) && !v.is_a?(TrueClass) && !v.is_a?(FalseClass)}.values.map(&:to_s) : [record["log"]])}
+
+        number_fields.names    ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(Numeric)}.keys : []}
+        number_fields.values   ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(Numeric)}.values : []}
+
+        boolean_fields.names   ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(TrueClass) || v.is_a?(FalseClass)}.keys : []}
+        boolean_fields.values  ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(TrueClass) || v.is_a?(FalseClass)}.values.map{|v| v ? 1 : 0} : []}
+
+        null_fields.names      ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.nil?}.keys : []}
+    </record>
+    remove_keys kubernetes, docker, master_url, time, stream, log, _json_log_
+  </filter>
 
     <filter docker.**>
       @type record_modifier
       <record>
         timestamp              ${time}
-        nsec                   ${record["time"].split('.'.last.to_i}
+        nsec                   ${record["time"].split('.').last.to_i}
         host                   "#{Socket.gethostname}"
         logs.key               ${["level", "msg", "err", "statusCode"]}
         logs.value             ${[record["level"], record["msg"], record["err"], record["statusCode"]]}
@@ -141,7 +144,7 @@ data:
       @type record_modifier
       <record>
         timestamp              ${time}
-        nsec                   ${record["time"].split('.'.last.to_i}
+        nsec                   ${record["time"].split('.').last.to_i}
         host                   "#{Socket.gethostname}"
         logs.key               ${["_TRANSPORT", "PRIORITY", "SYSLOG_FACILITY", "SYSLOG_IDENTIFIER", "_PID", "_UID", "_GID", "_COMM", "_EXE", "_CMDLINE", "_CAP_EFFECTIVE", "_SYSTEMD_CGROUP", "_SYSTEMD_UNIT", "_SYSTEMD_SLICE", "_BOOT_ID", "_MACHINE_ID", "_HOSTNAME", "MESSAGE"]}
         logs.value             ${[record["_TRANSPORT"], record["PRIORITY"], record["SYSLOG_FACILITY"], record["SYSLOG_IDENTIFIER"], record["_PID"], record["_UID"], record["_GID"], record["_COMM"], record["_EXE"], record["_CMDLINE"], record["_CAP_EFFECTIVE"], record["_SYSTEMD_CGROUP"], record["_SYSTEMD_UNIT"], record["_SYSTEMD_SLICE"], record["_BOOT_ID"], record["_MACHINE_ID"], record["_HOSTNAME"], record["MESSAGE"]]}
