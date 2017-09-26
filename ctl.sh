@@ -121,7 +121,7 @@ function install {
   then
     export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
     export STORAGE_CLASS_NAME=$STORAGE_CLASS_NAME
-    STORAGECLASS_USER_SECRET_NAME=$(kctl get storageclass $STORAGE_CLASS_NAME -o json | jq '.parameters.userSecretName' | tr -d '"')
+    STORAGECLASS_USER_SECRET_NAME=$(kubectl -n $STORAGE_NAMESPACE get storageclass $STORAGE_CLASS_NAME -o json | jq '.parameters.userSecretName' | tr -d '"')
     STORAGECLASS_USER_SECRET_VALUE=$(kubectl -n $STORAGE_NAMESPACE get secret $STORAGECLASS_USER_SECRET_NAME -o json | jq '.data.key' | tr -d '"')
     sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRET_NAME/" manifests/clickhouse/storage_secret.yaml
     sed -i -e "s/##STORAGECLASS_USER_SECRET_VALUE##/$STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
