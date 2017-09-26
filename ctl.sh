@@ -72,7 +72,7 @@ while true; do
   esac
 done
 
-if [ -z "$MODE" ]; then echo "Mode of operation not provided. Use '-h' to print proper usage."; exit 1; fi
+if [ ! "$MODE" ]; then echo "Mode of operation not provided. Use '-h' to print proper usage."; exit 1; fi
 
 type curl >/dev/null 2>&1 || { echo >&2 "I require curl but it's not installed.  Aborting."; exit 1; }
 type base64 >/dev/null 2>&1 || { echo >&2 "I require base64 but it's not installed.  Aborting."; exit 1; }
@@ -137,10 +137,6 @@ function upgrade {
               manifests/ingress/basic-auth-secret.yaml
   # install ingress host
   sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/ingress.yaml
-  if [ -z "$READ_FROM_HEAD" ];
-    then 
-      sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
-  fi
   $DEPLOY_SCRIPT
 }
 
