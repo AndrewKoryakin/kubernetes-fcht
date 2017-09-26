@@ -128,7 +128,7 @@ function install {
 }
 
 function upgrade {
-  PASSWORD=$(kubectl -n "$NAMESPACE" get secret basic-auth-secret -o json | jq .data.password -r | base64 -d)
+  PASSWORD=$(kubectl -n "$NAMESPACE" get secret basic-auth -o json | jq .data.password -r | base64 -d)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   CLICKHOUSE_HOST=$(kubectl -n "$NAMESPACE" get ingress clickhouse-ingress -o json | jq -r '.spec.rules[0].host')
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
