@@ -71,7 +71,7 @@ spec:
       serviceAccountName: fluentd
       containers:
       - name: fluentd
-        image: wimbo/fluentd
+        image: navyzet/fluentd
         imagePullPolicy: Always
         env:
         - name: FLUENTD_ARGS
