@@ -29,6 +29,7 @@ TMP_DIR="/tmp/fcht-ctl-$RANDOM_NUMBER"
 WORKDIR="$TMP_DIR/kubernetes-fcht"
 DEPLOY_SCRIPT="./deploy.sh"
 TEARDOWN_SCRIPT="./teardown.sh"
+UPGRADE_SCRIPT="./upgrade.sh"
 
 MODE=""
 USER=admin
@@ -169,7 +170,7 @@ function upgrade {
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
 
-  $DEPLOY_SCRIPT
+  $UPGRADE_SCRIPT
 }
 
 if [ "$MODE" == "install" ]
@@ -197,4 +198,3 @@ function cleanup {
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
-
