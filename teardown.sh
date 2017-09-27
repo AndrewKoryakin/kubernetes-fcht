@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "${NAMESPACE}" ]; then
+if [ ! "${NAMESPACE}" ]; then
     NAMESPACE=kube-logging
 fi
 
