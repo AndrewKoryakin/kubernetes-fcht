@@ -24,4 +24,4 @@ VOLUME /var/lib/clickhouse
 COPY init.sh /usr/local/bin/init.sh
 ENV CLICKHOUSE_CONFIG /etc/clickhouse-server/config.xml
 
-ENTRYPOINT exec /usr/bin/clickhouse-server --config=$(CLICKHOUSE_CONFIG}
+ENTRYPOINT exec /usr/bin/clickhouse-server --config=${CLICKHOUSE_CONFIG}
