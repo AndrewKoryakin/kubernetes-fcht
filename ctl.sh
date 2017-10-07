@@ -174,7 +174,7 @@ function upgrade {
   CLICKHOUSE_PASS=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: CLICKHOUSE_PASS' -A1 | grep 'value: ' | awk '{print $NF}')
   CLICKHOUSE_DB=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: CLICKHOUSE_DB' -A1 | grep 'value: ' | awk '{print $NF}')
   K8S_LOGS_TABLE=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: K8S_LOGS_TABLE' -A1 | grep 'value: ' | awk '{print $NF}')
-  CLICKHOUSE_SHA256_PASS=$(kubectl -n "$NAMESPACE" get cm clickhouse-config -o yaml | grep '<password_sha256_hex>' | cut -f2 -d'>' | cut -f1 -d'<')
+  CLICKHOUSE_PASS_SHA256=$(kubectl -n "$NAMESPACE" get cm clickhouse-config -o yaml | grep '<password_sha256_hex>' | cut -f2 -d'>' | cut -f1 -d'<')
   #Get tabix
   TABIX_HOST="tabix.$KUBE_HOST"
   # Get loghouse variables
