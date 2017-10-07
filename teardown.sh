@@ -11,3 +11,6 @@ kctl() {
 kctl delete -f manifests/fluentd
 kctl delete -f manifests/clickhouse
 kctl delete -f manifests/ingress
+kctl delete -f manifests/loghouse
+kctl delete -f manifests/tabix
+
