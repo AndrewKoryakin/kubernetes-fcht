@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 ! read -rd '' HELP_STRING <<"EOF"
 Usage: ctl.sh [OPTION]... [-i|--install] KUBE_HOST
