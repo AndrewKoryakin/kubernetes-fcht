@@ -71,7 +71,7 @@ spec:
       serviceAccountName: fluentd
       containers:
       - name: fluentd
-        image: wimbo/fluentd
+        image: navyzet/fluentd
         imagePullPolicy: Always
         env:
         - name: FLUENTD_ARGS
@@ -81,13 +81,13 @@ spec:
         - name: CLICKHOUSE_PORT
           value: "9000"
         - name: CLICKHOUSE_USER
-          value: "##CLICKHOUSE_USER##"
+          value: "default"
         - name: CLICKHOUSE_PASS
           value: "##CLICKHOUSE_PASS##"
         - name: CLICKHOUSE_DB
           value: "##CLICKHOUSE_DB##"
         - name: K8S_LOG_TABLE
-          value: "##K8S_LOG_TABLE##"
+          value: "##K8S_LOGS_TABLE##"
         resources:
           limits:
             memory: 2Gi

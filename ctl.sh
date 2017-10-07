@@ -9,7 +9,7 @@ Usage: ctl.sh [OPTION]... [-i|--install] KUBE_HOST
 Install FCHT (Fluentd, ClickHouse, Tabix) stack to Kubernetes cluster.
 
 Mandatory arguments:
-  -i, --install                install into 'kube-logging' namespace, override with '-n' option
+  -i, --install                install into 'kube-logging' namespace
   -u, --upgrade                upgrade existing installation, will reuse password and host names
   -d, --delete                 remove everything, including the namespace
 
@@ -29,6 +29,7 @@ TMP_DIR="/tmp/fcht-ctl-$RANDOM_NUMBER"
 WORKDIR="$TMP_DIR/kubernetes-fcht"
 DEPLOY_SCRIPT="./deploy.sh"
 TEARDOWN_SCRIPT="./teardown.sh"
+UPGRADE_SCRIPT="./upgrade.sh"
 
 MODE=""
 USER=admin
@@ -72,7 +73,7 @@ while true; do
   esac
 done
 
-if [ -z "$MODE" ]; then echo "Mode of operation not provided. Use '-h' to print proper usage."; exit 1; fi
+if [ ! "$MODE" ]; then echo "Mode of operation not provided. Use '-h' to print proper usage."; exit 1; fi
 
 type curl >/dev/null 2>&1 || { echo >&2 "I require curl but it's not installed.  Aborting."; exit 1; }
 type base64 >/dev/null 2>&1 || { echo >&2 "I require base64 but it's not installed.  Aborting."; exit 1; }
@@ -83,37 +84,47 @@ type htpasswd >/dev/null 2>&1 || { echo >&2 "I require htpasswd but it's not ins
 type sha256sum >/dev/null 2>&1 || { echo >&2 "I require sha256sum but it's not installed. Aborting."; exit 1; }
 
 
+SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
-git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
+#git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
+cp -r ${SRC_DIR} ${TMP_DIR} 
 cd "$WORKDIR"
-
 
 function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
-  CLICKHOUSE_PASSWORD=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-' | tr -d ' ')
+  CLICKHOUSE_PASS_SHA256=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-' | tr -d ' ')
   CLICKHOUSE_HOST="clickhouse$KUBE_HOST"
   TABIX_HOST="tabix$KUBE_HOST"
   # install basic-auth secret
-  sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" \
-              manifests/ingress/basic-auth-secret.yaml
+  sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" manifests/ingress/basic-auth-secret.yaml
   # install ingress host
   sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
   sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
   # set storage for clickhouse
   sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
   # set clickhouse password
-  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASSWORD/g" manifests/clickhouse/clickhouse-configmap.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS_SHA256##/$CLICKHOUSE_PASS_SHA256/g" manifests/clickhouse/clickhouse-configmap.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
+  #set clickhouse db
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
+  #set clickhouse table
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
+
   if [ -n "$STORAGE_NAMESPACE" ] ;
   then
     export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
     export STORAGE_CLASS_NAME=$STORAGE_CLASS_NAME
+    STORAGECLASS_USER_SECRET_NAME=$(kubectl -n $STORAGE_NAMESPACE get storageclass $STORAGE_CLASS_NAME -o json | jq '.parameters.userSecretName' | tr -d '"')
+    STORAGECLASS_USER_SECRET_VALUE=$(kubectl -n $STORAGE_NAMESPACE get secret $STORAGECLASS_USER_SECRET_NAME -o json | jq '.data.key' | tr -d '"')
+    sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRET_NAME/" manifests/clickhouse/storage_secret.yaml
+    sed -i -e "s/##STORAGECLASS_USER_SECRET_VALUE##/$STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
   fi
   $DEPLOY_SCRIPT
   echo '##################################'
@@ -123,27 +134,49 @@ function install {
 }
 
 function upgrade {
-  PASSWORD=$(kubectl -n "$NAMESPACE" get secret basic-auth-secret -o json | jq .data.password -r | base64 -d)
+  PASSWORD=$(kubectl -n "$NAMESPACE" get secret basic-auth -o json | jq .data.password -r | base64 -d)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
-  CLICKHOUSE_HOST=$(kubectl -n "$NAMESPACE" get ingress clickhouse-ingress -o json | jq -r '.spec.rules[0].host')
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
+  KUBE_HOST="$(kubectl -n "$NAMESPACE" get ingress clickhouse -o yaml | grep "host:" | cut -d . -f 2-)"
+  CLICKHOUSE_HOST="clickhouse.$KUBE_HOST"
+  TABIX_HOST="tabix.$KUBE_HOST"
+  CLICKHOUSE_PASS=$(kubectl -n kube-logging get deployment clickhouse-server -o yaml | grep CLICKHOUSE_PASS -A 1 | tail -n 1 | awk '{print $2}')
+  CLICKHOUSE_PASS_SHA256=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-' | tr -d ' ')
   # install basic-auth secret
-  sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" \
-              manifests/ingress/basic-auth-secret.yaml
+  sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" manifests/ingress/basic-auth-secret.yaml
   # install ingress host
-  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/ingress.yaml
-  if [ -z "$READ_FROM_HEAD" ];
-    then 
-      sed -i -e "s/##READ_FROM_HEAD_STR##/$READ_FROM_HEAD_STR/g" manifests/fluentd/fluentd-configmap.yaml
+  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
+  sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
+  # set storage for clickhouse
+  STORAGECLASS_USER_SECRET_VALUE=$(kubectl -n kube-logging get secret -l storage=clickhouse -o yaml | grep "key:" | awk '{print $2}')
+  STORAGECLASS_USER_SECRET_NAME=$(kubectl -n kube-logging get secret -l storage=clickhouse -o yaml | grep "name:" | awk '{print $2}')
+  STORAGE_SIZE=$(kubectl -n kube-logging get persistentvolumeclaim  clickhouse -o yaml | grep storage: | tail -n 1 | awk '{print $2}')
+  STORAGE_CLASS_NAME=$(kubectl -n kube-logging get persistentvolumeclaim  clickhouse -o yaml | grep storageClassName: |  awk '{print $2}')
+  CLICKHOUSE_DB=$(kubectl -n kube-logging get deployment clickhouse-server -o yaml | grep CLICKHOUSE_DB  -A 1 | tail -n 1 | awk '{print $2}')
+  if [ -n "$STORAGECLASS_USER_SECRET_VALUE" ] ; then
+    sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRET_NAME/" manifests/clickhouse/storage_secret.yaml
+    sed -i -e "s/##STORAGECLASS_USER_SECRET_VALUE##/$STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
+    sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
+    sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
   fi
-  $DEPLOY_SCRIPT
+  #set clickhouse password
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS_SHA256##/$CLICKHOUSE_PASS_SHA256/g" manifests/clickhouse/clickhouse-configmap.yaml
+  #set clickhouse db
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
+  #set clickhouse table
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
+
+  $UPGRADE_SCRIPT
 }
 
 if [ "$MODE" == "install" ]
 then
-  if [ -z "$1" ] && [ -z "$2" ]; then echo "Two positional arguments required. See '--help' for more information."; exit 1; fi
-  TABIX_HOST="$1"
-  CLICKHOUSE_HOST="$2"
+  KUBE_HOST="$1"
+  if [ ! "$KUBE_HOST" ] ; then echo "KUBE_HOST arguments required. See '--help' for more information."; exit 1; fi
   kubectl get ns "$NAMESPACE" >/dev/null 2>&1 && FIRST_INSTALL="false"
   if [ "$FIRST_INSTALL" == "true" ]
   then
