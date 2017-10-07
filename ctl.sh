@@ -165,38 +165,72 @@ function upgrade {
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
   KUBE_HOST="$(kubectl -n "$NAMESPACE" get ingress clickhouse -o yaml | grep "host:" | cut -d . -f 2-)"
+  # Get clickhouse variables
   CLICKHOUSE_HOST="clickhouse.$KUBE_HOST"
-  TABIX_HOST="tabix.$KUBE_HOST"
-  CLICKHOUSE_PASS=$(kubectl -n kube-logging get deployment clickhouse-server -o yaml | grep CLICKHOUSE_PASS -A 1 | tail -n 1 | awk '{print $2}')
-  CLICKHOUSE_PASS_SHA256=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-' | tr -d ' ')
-  # install basic-auth secret
-  sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" manifests/ingress/basic-auth-secret.yaml
-  # install ingress host
-  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
-  sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
-  # set storage for clickhouse
   STORAGECLASS_USER_SECRET_VALUE=$(kubectl -n kube-logging get secret -l storage=clickhouse -o yaml | grep "key:" | awk '{print $2}')
   STORAGECLASS_USER_SECRET_NAME=$(kubectl -n kube-logging get secret -l storage=clickhouse -o yaml | grep "name:" | awk '{print $2}')
   STORAGE_SIZE=$(kubectl -n kube-logging get persistentvolumeclaim  clickhouse -o yaml | grep storage: | tail -n 1 | awk '{print $2}')
   STORAGE_CLASS_NAME=$(kubectl -n kube-logging get persistentvolumeclaim  clickhouse -o yaml | grep storageClassName: |  awk '{print $2}')
-  CLICKHOUSE_DB=$(kubectl -n kube-logging get deployment clickhouse-server -o yaml | grep CLICKHOUSE_DB  -A 1 | tail -n 1 | awk '{print $2}')
+  CLICKHOUSE_PASS=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: CLICKHOUSE_PASS' -A1 | grep 'value: ' | awk '{print $NF}')
+  CLICKHOUSE_DB=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: CLICKHOUSE_DB' -A1 | grep 'value: ' | awk '{print $NF}')
+  K8S_LOGS_TABLE=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: K8S_LOGS_TABLE' -A1 | grep 'value: ' | awk '{print $NF}')
+  CLICKHOUSE_SHA256_PASS=$(kubectl -n "$NAMESPACE" get cm clickhouse-config -o yaml | grep '<password_sha256_hex>' | cut -f2 -d'>' | cut -f1 -d'<')
+  #Get tabix
+  TABIX_HOST="tabix.$KUBE_HOST"
+  # Get loghouse variables
+  LOGHOUSE_HOST="loghouse.$KUBE_HOST"
+  # check https
+  if ! kubectl -n "$NAMESPACE" get ing loghouse -o yaml | grep 'tls-acme' > /dev/null; then
+    HTTPS="false"
+  fi
+  # install basic-auth secret
+  sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" manifests/ingress/basic-auth-secret.yaml
+  # install ingress host
+  if [ "$HTTPS" == "false" ] ;
+  then
+    sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/clickhouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/loghouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/tabix.yaml
+    # prepare url to clickhouse for loghouse
+    sed -i -e "s/##CLICKHOUSE_HOST##/http:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
+  else
+    # enable LE (tls-acme)
+    sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/clickhouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/loghouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/tabix.yaml
+    # add tls section
+    sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##CLICKHOUSE_HOST##\n    secretName: clickhouse" manifests/ingress/clickhouse.yaml
+    sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##LOGHOUSE_HOST##\n    secretName: loghouse" manifests/ingress/loghouse.yaml
+    sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##TABIX_HOST##\n    secretName: tabix" manifests/ingress/tabix.yaml
+    # prepare url to clickhouse for loghouse
+    sed -i -e "s/##CLICKHOUSE_HOST##/https:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
+  fi
+  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
+  sed -i -e "s/##LOGHOUSE_HOST##/$LOGHOUSE_HOST/g" manifests/ingress/loghouse.yaml
+  sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
+  # set storage for clickhouse
+  sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
+  # set clickhouse password
+  sed -i -e "s/##CLICKHOUSE_PASS_SHA256##/$CLICKHOUSE_PASS_SHA256/g" manifests/clickhouse/clickhouse-configmap.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/loghouse/loghouse.yaml
+  #set clickhouse db
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/loghouse/loghouse.yaml
+  #set clickhouse table
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
+  # set storage for clickhouse
   if [ -n "$STORAGECLASS_USER_SECRET_VALUE" ] ; then
     sed -i -e "s/##STORAGECLASS_USER_SECRET_NAME##/$STORAGECLASS_USER_SECRET_NAME/" manifests/clickhouse/storage_secret.yaml
     sed -i -e "s/##STORAGECLASS_USER_SECRET_VALUE##/$STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
     sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
     sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
   fi
-  #set clickhouse password
-  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
-  sed -i -e "s/##CLICKHOUSE_PASS_SHA256##/$CLICKHOUSE_PASS_SHA256/g" manifests/clickhouse/clickhouse-configmap.yaml
-  #set clickhouse db
-  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
-  #set clickhouse table
-  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
-
   $UPGRADE_SCRIPT
 }
 
