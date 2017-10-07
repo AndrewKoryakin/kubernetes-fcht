@@ -31,3 +31,6 @@ kctl apply -f manifests/tabix
 
 echo "Upgrade ingress"
 kctl apply -f manifests/ingress
+
+echo "Upgrade loghouse"
+kctl apply -f manifests/loghouse
