@@ -6,17 +6,15 @@ metadata:
   namespace: kube-logging
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    kubernetes.io/tls-acme: "true"
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: basic-auth
+    ingress.kubernetes.io/auth-realm: "Authrentication Required"
 spec:
   rules:
-  - host: ch.domain
+  - host: ##LOGHOUSE_HOST##
     http:
       paths:
       - path: /
         backend:
           serviceName: loghouse
           servicePort: 9292
-  tls:
-  - hosts:
-    - ch.domain
-    secretName: loghouse

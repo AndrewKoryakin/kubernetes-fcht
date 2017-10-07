@@ -14,11 +14,10 @@ Mandatory arguments:
   -d, --delete                 remove everything, including the namespace
 
 Optional arguments:
-  --clickhouse-pass            set clickhouse default user password
-  --clickhouse-db              set clickhouse DB name for collecting logs
   --storage-class-name         name of the storage class
   --storage-size               storage size with optional IEC suffix
   --storage-namespace          set name of namespace from what copy secret
+  --https                      disable Lets Encrypt for domains
 
 Optional arguments:
   -h, --help                   output this message
@@ -37,11 +36,10 @@ NAMESPACE="kube-logging"
 FIRST_INSTALL="true"
 STORAGE_CLASS_NAME="rbd"
 STORAGE_SIZE="20Gi"
-CLICKHOUSE_PASS="default"
 CLICKHOUSE_DB="logs"
 K8S_LOGS_TABLE="logs"
 
-TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,clickhouse-pass:,clickhouse-db:,storage-namespace: \
+TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,storage-namespace:,https: \
              -n 'ctl' -- "$@")
 
 eval set -- "$TEMP"
@@ -58,12 +56,10 @@ while true; do
       STORAGE_CLASS_NAME="$2"; shift 2;;
     --storage-size )
       STORAGE_SIZE="$2"; shift 2;;
-    --clickhouse-pass )
-      CLICKHOUSE_PASS="$2"; shift 2;;
-    --clickhouse-db )
-      CLICKHOUSE_DB="$2"; shift 2;;
     --storage-namespace )
       STORAGE_NAMESPACE="$2"; shift 2;;
+    --https )
+      HTTPS="$2"; shift 2;;
     -h | --help )
       echo "$HELP_STRING"; exit 0 ;;
     -- )
@@ -95,13 +91,31 @@ function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
   PASSWORD_BASE64=$(echo -n "$PASSWORD" | base64 -w0)
   BASIC_AUTH_SECRET=$(echo "$PASSWORD" | htpasswd -ni admin | base64 -w0)
+  CLICKHOUSE_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
   CLICKHOUSE_PASS_SHA256=$(echo -n $CLICKHOUSE_PASS | sha256sum | tr -d '-' | tr -d ' ')
   CLICKHOUSE_HOST="clickhouse$KUBE_HOST"
   TABIX_HOST="tabix$KUBE_HOST"
+  LOGHOUSE_HOST="loghouse$KUBE_HOST"
   # install basic-auth secret
   sed -i -e "s%##BASIC_AUTH_SECRET##%$BASIC_AUTH_SECRET%" -e "s%##PLAINTEXT_PASSWORD##%$PASSWORD_BASE64%" manifests/ingress/basic-auth-secret.yaml
   # install ingress host
+  if [ "$HTTPS" == "false" ] ;
+  then
+    sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/clickhouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/loghouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/tabix.yaml
+  else
+    # enable LE (tls-acme)
+    sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/clickhouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/loghouse.yaml
+    sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/tabix.yaml
+    # add tls section
+    sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##CLICKHOUSE_HOST##\n    secretName: clickhouse" manifests/ingress/clickhouse.yaml
+    sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##LOGHOUSE_HOST##\n    secretName: loghouse" manifests/ingress/loghouse.yaml
+    sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##TABIX_HOST##\n    secretName: tabix" manifests/ingress/tabix.yaml
+  fi
   sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
+  sed -i -e "s/##LOGHOUSE_HOST##/$LOGHOUSE_HOST/g" manifests/ingress/loghouse.yaml
   sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
   # set storage for clickhouse
   sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
@@ -110,12 +124,15 @@ function install {
   sed -i -e "s/##CLICKHOUSE_PASS_SHA256##/$CLICKHOUSE_PASS_SHA256/g" manifests/clickhouse/clickhouse-configmap.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/loghouse/loghouse.yaml
   #set clickhouse db
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/loghouse/loghouse.yaml
   #set clickhouse table
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
 
   if [ -n "$STORAGE_NAMESPACE" ] ;
   then
@@ -128,9 +145,15 @@ function install {
   fi
   $DEPLOY_SCRIPT
   echo '##################################'
+  echo 'Basic auth for loghouse and tabix'
   echo "Login: admin"
   echo "Password: $PASSWORD"
   echo '##################################'
+  echo '##################################'
+  echo 'Auth for clickhouse user'
+  echo 'Login: default'
+  echo "Password: $CLICKHOUSE_PASS"
+  echo '#################################'
 }
 
 function upgrade {

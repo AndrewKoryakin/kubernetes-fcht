@@ -34,3 +34,6 @@ kctl apply -f manifests/tabix
 
 echo "Deploying ingress"
 kctl apply -f manifests/ingress
+
+echo "Deploying loghouse"
+kctl apply -f manifests/loghouse

@@ -24,13 +24,15 @@ spec:
           containerPort: 9292
         env:
         - name: CLICKHOUSE_URL
-          value: "http://ch.domain/"
+          value: "##CLICKHOUSE_HOST##"
         - name: CLICKHOUSE_USERNAME
           value: "default"
         - name: CLICKHOUSE_PASSWORD
-          value: ""
+          value: "##CLICKHOUSE_PASS##"
+        - name: CLICKHOUSE_LOGS_TABLE
+          value: "##K8S_LOGS_TABLE##"
         - name: CLICKHOUSE_DATABASE
-          value: "logs"
+          value: "##CLICKHOUSE_DB##"
         livenessProbe:
           tcpSocket:
             port: 9292
@@ -56,4 +58,3 @@ spec:
       port: 9292
       targetPort: 9292
       protocol: TCP
-
