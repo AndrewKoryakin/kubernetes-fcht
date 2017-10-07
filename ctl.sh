@@ -104,6 +104,8 @@ function install {
     sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/clickhouse.yaml
     sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/loghouse.yaml
     sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/tabix.yaml
+    # prepare url to clickhouse for loghouse
+    sed -i -e "s/##CLICKHOUSE_HOST##/http:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
   else
     # enable LE (tls-acme)
     sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/clickhouse.yaml
@@ -113,12 +115,12 @@ function install {
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##CLICKHOUSE_HOST##\n    secretName: clickhouse" manifests/ingress/clickhouse.yaml
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##LOGHOUSE_HOST##\n    secretName: loghouse" manifests/ingress/loghouse.yaml
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##TABIX_HOST##\n    secretName: tabix" manifests/ingress/tabix.yaml
+    # prepare url to clickhouse for loghouse
+    sed -i -e "s/##CLICKHOUSE_HOST##/https:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
   fi
   sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
   sed -i -e "s/##LOGHOUSE_HOST##/$LOGHOUSE_HOST/g" manifests/ingress/loghouse.yaml
   sed -i -e "s/##TABIX_HOST##/$TABIX_HOST/g" manifests/ingress/tabix.yaml
-  # set clickhouse URL for loghouse
-  sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
   # set storage for clickhouse
   sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
