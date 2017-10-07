@@ -153,7 +153,6 @@ function install {
   echo "Login: admin"
   echo "Password: $PASSWORD"
   echo '##################################'
-  echo '##################################'
   echo 'Auth for clickhouse user'
   echo 'Login: default'
   echo "Password: $CLICKHOUSE_PASS"
