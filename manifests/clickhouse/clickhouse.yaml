@@ -36,6 +36,8 @@ spec:
         volumeMounts:
           - name: clickhouse
             mountPath: /var/lib/clickhouse
+      node Selector:
+        dedicated: clickhouse
       containers:
       - name: clickhouse
         image:  navyzet/clickhouse:latest
@@ -87,6 +89,19 @@ spec:
         - name: config-volume
           configMap:
             name: clickhouse-config
+      tolerations:
+      - operator: "Equal"
+        key: "dedicated"
+        value: "clickhouse"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: dedicated
+                operator: In
+                values:
+                - production
 ---
 apiVersion: v1
 kind: Service
