@@ -38,7 +38,7 @@ spec:
             mountPath: /var/lib/clickhouse
       containers:
       - name: clickhouse
-        image:  navyzet/clickhouse:latest
+        image:  wimbo/clickhouse:latest
         imagePullPolicy: Always
         ports:
         - name: http
@@ -99,7 +99,7 @@ spec:
               - key: dedicated
                 operator: In
                 values:
-                - clickhouse
+                - ch
 ---
 apiVersion: v1
 kind: Service
