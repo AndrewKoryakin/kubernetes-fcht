@@ -36,8 +36,6 @@ spec:
         volumeMounts:
           - name: clickhouse
             mountPath: /var/lib/clickhouse
-      nodeSelector:
-        dedicated: clickhouse
       containers:
       - name: clickhouse
         image:  navyzet/clickhouse:latest
@@ -101,7 +99,7 @@ spec:
               - key: dedicated
                 operator: In
                 values:
-                - production
+                - clickhouse
 ---
 apiVersion: v1
 kind: Service
