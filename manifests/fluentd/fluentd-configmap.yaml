@@ -113,9 +113,15 @@ data:
         _json_log_             ${ log = record["log"].strip; if log[0].eql?('{') && log[-1].eql?('}'); begin; JSON.parse(log); rescue JSON::ParserError; end; end }
         timestamp              ${time}
         nsec                   ${record["time"].split('.').last.to_i}
-
-        string_fields.names    ${["namespace", "host", "pod_name", "container_name", "stream"] + record["kubernetes"]["labels"].keys.map{|k| "label." + k} + (record["_json_log_"] ? record["_json_log_"].select{|_, v| !v.nil? && !v.is_a?(Numeric) && !v.is_a?(TrueClass) && !v.is_a?(FalseClass)}.keys : ["log"])}
-        string_fields.values   ${[record["kubernetes"]["namespace_name"], record["kubernetes"]["host"], record["kubernetes"]["pod_name"], record["kubernetes"]["container_name"], record["stream"]] + record["kubernetes"]["labels"].values + (record["_json_log_"] ? record["_json_log_"].select{|_, v| !v.nil? && !v.is_a?(Numeric) && !v.is_a?(TrueClass) && !v.is_a?(FalseClass)}.values.map(&:to_s) : [record["log"]])}
+        # static fields
+        namespace              ${record["kubernetes"]["namespace_name"]}
+        host                   ${record["kubernetes"]["host"]}
+        pod_name               ${record["kubernetes"]["pod_name"]}
+        container_name         ${record["kubernetes"]["container_name"]}
+        stream                 ${record["stream"]}
+        # dynamic fields
+        string_fields.names    ${record["kubernetes"]["labels"].keys.map{|k| "label." + k} + (record["_json_log_"] ? record["_json_log_"].select{|_, v| !v.nil? && !v.is_a?(Numeric) && !v.is_a?(TrueClass) && !v.is_a?(FalseClass)}.keys : ["log"])}
+        string_fields.values   ${record["kubernetes"]["labels"].values + (record["_json_log_"] ? record["_json_log_"].select{|_, v| !v.nil? && !v.is_a?(Numeric) && !v.is_a?(TrueClass) && !v.is_a?(FalseClass)}.values.map(&:to_s) : [record["log"]])}
 
         number_fields.names    ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(Numeric)}.keys : []}
         number_fields.values   ${record["_json_log_"] ? record["_json_log_"].select{|_, v| v.is_a?(Numeric)}.values : []}
@@ -163,7 +169,7 @@ data:
       num_threads 4
     </match>
 metadata:
-  name: fluentd-config-v0.1.0
+  name: fluentd-config
   namespace: kube-logging
   labels:
     addonmanager.kubernetes.io/mode: Reconcile

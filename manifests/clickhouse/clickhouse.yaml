@@ -58,6 +58,8 @@ spec:
           value: "##CLICKHOUSE_DB##"
         - name: K8S_LOGS_TABLE
           value: "##K8S_LOGS_TABLE##"
+        - name: TZ
+          value: "Europe/Moscow"
         livenessProbe:
           timeoutSeconds: 1
           initialDelaySeconds: 60

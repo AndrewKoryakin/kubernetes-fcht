@@ -48,11 +48,10 @@ roleRef:
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
-  name: fluentd-v2.0.1
+  name: fluentd
   namespace: kube-logging
   labels:
     k8s-app: fluentd
-    version: v2.0.1
     kubernetes.io/cluster-service: "true"
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
@@ -61,7 +60,6 @@ spec:
       labels:
         k8s-app: fluentd
         kubernetes.io/cluster-service: "true"
-        version: v2.0.1
       # This annotation ensures that fluentd does not get evicted if the node
       # supports critical pod annotation based priority scheme.
       # Note that this does not guarantee admission on the nodes (#40573).
@@ -86,8 +84,10 @@ spec:
           value: "##CLICKHOUSE_PASS##"
         - name: CLICKHOUSE_DB
           value: "##CLICKHOUSE_DB##"
-        - name: K8S_LOG_TABLE
+        - name: K8S_LOGS_TABLE
           value: "##K8S_LOGS_TABLE##"
+        - name: TZ
+          value: Europe/Moscow
         resources:
           limits:
             memory: 2Gi
@@ -121,4 +121,4 @@ spec:
           path: /usr/lib64
       - name: config-volume
         configMap:
-          name: fluentd-config-v0.1.0
+          name: fluentd-config

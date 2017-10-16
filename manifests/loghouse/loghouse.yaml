@@ -29,10 +29,12 @@ spec:
           value: "default"
         - name: CLICKHOUSE_PASSWORD
           value: "##CLICKHOUSE_PASS##"
-        - name: CLICKHOUSE_LOGS_TABLE
-          value: "##K8S_LOGS_TABLE##"
         - name: CLICKHOUSE_DATABASE
           value: "##CLICKHOUSE_DB##"
+        - name: CLICKHOUSE_LOGS_TABLE
+          value: "##K8S_LOGS_TABLE##"
+        - name: TZ
+          value: "Europe/Moscow"
         livenessProbe:
           tcpSocket:
             port: 9292

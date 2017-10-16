@@ -18,6 +18,7 @@ Optional arguments:
   --storage-size               storage size with optional IEC suffix
   --storage-namespace          set name of namespace from what copy secret
   --https                      disable Lets Encrypt for domains
+  --branch                     use specific branch
 
 Optional arguments:
   -h, --help                   output this message
@@ -38,8 +39,9 @@ STORAGE_CLASS_NAME="rbd"
 STORAGE_SIZE="20Gi"
 CLICKHOUSE_DB="logs"
 K8S_LOGS_TABLE="logs"
+BRANCH="master"
 
-TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,storage-namespace:,https: \
+TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,storage-namespace:,https:,branch: \
              -n 'ctl' -- "$@")
 
 eval set -- "$TEMP"
@@ -60,6 +62,8 @@ while true; do
       STORAGE_NAMESPACE="$2"; shift 2;;
     --https )
       HTTPS="$2"; shift 2;;
+    --branch )
+      BRANCH="$2"; shift 2;;
     -h | --help )
       echo "$HELP_STRING"; exit 0 ;;
     -- )
@@ -83,7 +87,7 @@ type sha256sum >/dev/null 2>&1 || { echo >&2 "I require sha256sum but it's not i
 SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
-git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
+git clone --depth 1 -b ${BRANCH} https://github.com/qw1mb0/kubernetes-fcht.git
 #cp -r ${SRC_DIR} ${TMP_DIR} 
 cd "$WORKDIR"
 
@@ -129,13 +133,13 @@ function install {
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/loghouse/loghouse.yaml
-  #set clickhouse db
+  # set clickhouse db
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/loghouse/loghouse.yaml
-  #set clickhouse table
+  # set clickhouse table
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluebtd-ds.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
 
   if [ -n "$STORAGE_NAMESPACE" ] ;
@@ -215,11 +219,11 @@ function upgrade {
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##CLICKHOUSE_PASS##/$CLICKHOUSE_PASS/g" manifests/loghouse/loghouse.yaml
-  #set clickhouse db
+  # set clickhouse db
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/loghouse/loghouse.yaml
-  #set clickhouse table
+  # set clickhouse table
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
