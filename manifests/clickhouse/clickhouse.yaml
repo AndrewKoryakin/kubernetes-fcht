@@ -36,7 +36,7 @@ spec:
         volumeMounts:
           - name: clickhouse
             mountPath: /var/lib/clickhouse
-      node Selector:
+      nodeSelector:
         dedicated: clickhouse
       containers:
       - name: clickhouse
