@@ -139,7 +139,7 @@ function install {
   sed -i -e "s/##CLICKHOUSE_DB##/$CLICKHOUSE_DB/g" manifests/loghouse/loghouse.yaml
   # set clickhouse table
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
-  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluebtd-ds.yaml
+  sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
 
   if [ -n "$STORAGE_NAMESPACE" ] ;
