@@ -91,15 +91,6 @@ spec:
       - operator: "Equal"
         key: "dedicated"
         value: "clickhouse"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: dedicated
-                operator: In
-                values:
-                - ch
 ---
 apiVersion: v1
 kind: Service
