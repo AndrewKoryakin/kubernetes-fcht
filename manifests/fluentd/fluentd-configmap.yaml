@@ -172,7 +172,7 @@ data:
     <match **>
       @type exec
       command bash /usr/local/bin/insert_system_ch.sh
-      format jsn
+      format json
       buffer_type memory
       buffer_chunk_limit 32m
       buffer_queue_limit 32
