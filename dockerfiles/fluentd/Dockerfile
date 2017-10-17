@@ -54,6 +54,7 @@ RUN BUILD_DEPS="make gcc g++ libc6-dev ruby-dev" \
 # Copy the Fluentd configuration file for logging Docker container logs.
 COPY fluent.conf /etc/fluent/fluent.conf
 COPY insert_ch.sh /usr/local/bin/insert_ch.sh
+COPY insert_system_ch.sh /usr/local/bin/insert_system_ch.sh
 COPY run.sh /run.sh
 RUN chmod +x /usr/local/bin/insert_ch.sh
 

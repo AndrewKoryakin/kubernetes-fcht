@@ -158,10 +158,21 @@ data:
       whitelist_keys           tag
     </filter>
 
-    <match **>
+    <match kubernetes.**>
       @type exec
       command bash /usr/local/bin/insert_ch.sh
       format json
+      buffer_type memory
+      buffer_chunk_limit 32m
+      buffer_queue_limit 32
+      flush_interval 1s
+      num_threads 4
+    </match>
+
+    <match **>
+      @type exec
+      command bash /usr/local/bin/insert_system_ch.sh
+      format jsn
       buffer_type memory
       buffer_chunk_limit 32m
       buffer_queue_limit 32

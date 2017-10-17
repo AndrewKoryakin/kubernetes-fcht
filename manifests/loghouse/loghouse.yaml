@@ -35,6 +35,9 @@ spec:
           value: "##K8S_LOGS_TABLE##"
         - name: TZ
           value: "Europe/Moscow"
+        volumeMounts:
+        - name: user-config
+          mountPath: /config
         livenessProbe:
           tcpSocket:
             port: 9292
@@ -46,6 +49,10 @@ spec:
             cpu: "0.2"
           limits:
             cpu: "1"
+      volumes:
+      - name: user-config
+        configMap:
+          name: loghouse-user-config
 ---
 apiVersion: v1
 kind: Service
