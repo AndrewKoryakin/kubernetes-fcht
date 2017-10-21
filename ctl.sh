@@ -144,7 +144,7 @@ function install {
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
   #set no_proxy variable
   sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/fluentd/fluentd-ds.yaml
-  sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/clickhouse/loghouse.yaml
+  sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/loghouse/loghouse.yaml
   if [ -n "$STORAGE_NAMESPACE" ] ;
   then
     export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
