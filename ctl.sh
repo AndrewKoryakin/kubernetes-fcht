@@ -121,7 +121,7 @@ function install {
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##LOGHOUSE_HOST##\n    secretName: loghouse" manifests/ingress/loghouse.yaml
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##TABIX_HOST##\n    secretName: tabix" manifests/ingress/tabix.yaml
     # prepare url to clickhouse for loghouse
-    sed -i -e "s/##CLICKHOUSE_HOST##/https:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
+    sed -i -e "s/##CLICKHOUSE_HOST##/https:\/\/clickhouse/g" manifests/loghouse/loghouse.yaml
   fi
   sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
   sed -i -e "s/##LOGHOUSE_HOST##/$LOGHOUSE_HOST/g" manifests/ingress/loghouse.yaml
