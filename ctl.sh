@@ -86,7 +86,7 @@ SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
 #git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
-git clone --depth 1 https://github.com/AndrewKoryakin/kubernetes-fcht.git
+git clone https://github.com/AndrewKoryakin/kubernetes-fcht.git
 
 #cp -r ${SRC_DIR} ${TMP_DIR}
 cd "$WORKDIR"
@@ -198,8 +198,6 @@ function upgrade {
     sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/clickhouse.yaml
     sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/loghouse.yaml
     sed -i -e 's/  annotations:/  annotations:\n    ingress.kubernetes.io\/force-ssl-redirect: "false"\n    ingress.kubernetes.io\/ssl-redirect: "false"/' manifests/ingress/tabix.yaml
-    # prepare url to clickhouse for loghouse
-    sed -i -e "s/##CLICKHOUSE_HOST##/http:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
   else
     # enable LE (tls-acme)
     sed -i -e 's/  annotations:/  annotations:\n    kubernetes.io\/tls-acme: "true"/' manifests/ingress/clickhouse.yaml
@@ -209,8 +207,6 @@ function upgrade {
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##CLICKHOUSE_HOST##\n    secretName: clickhouse" manifests/ingress/clickhouse.yaml
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##LOGHOUSE_HOST##\n    secretName: loghouse" manifests/ingress/loghouse.yaml
     sed -i -e "\$a\ \ tls:\n  - hosts:\n    - ##TABIX_HOST##\n    secretName: tabix" manifests/ingress/tabix.yaml
-    # prepare url to clickhouse for loghouse
-    sed -i -e "s/##CLICKHOUSE_HOST##/https:\/\/$CLICKHOUSE_HOST/g" manifests/loghouse/loghouse.yaml
   fi
   sed -i -e "s/##CLICKHOUSE_HOST##/$CLICKHOUSE_HOST/g" manifests/ingress/clickhouse.yaml
   sed -i -e "s/##LOGHOUSE_HOST##/$LOGHOUSE_HOST/g" manifests/ingress/loghouse.yaml
@@ -240,7 +236,7 @@ function upgrade {
   fi
   if [ -n "$NO_PROXY" ] ; then
     sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/fluentd/fluentd-ds.yaml
-    sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/clickhouse/clickhouse.yaml
+    sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/clickhouse/loghouse.yaml
   fi
   $UPGRADE_SCRIPT
 }

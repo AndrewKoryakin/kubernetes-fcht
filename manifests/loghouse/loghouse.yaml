@@ -24,7 +24,7 @@ spec:
           containerPort: 9292
         env:
         - name: CLICKHOUSE_URL
-          value: "##CLICKHOUSE_HOST##"
+          value: "http://clickhouse""
         - name: CLICKHOUSE_USERNAME
           value: "default"
         - name: CLICKHOUSE_PASSWORD
