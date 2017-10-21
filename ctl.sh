@@ -236,7 +236,7 @@ function upgrade {
   fi
   if [ -n "$NO_PROXY" ] ; then
     sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/fluentd/fluentd-ds.yaml
-    sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/clickhouse/loghouse.yaml
+    sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/loghouse/loghouse.yaml
   fi
   $UPGRADE_SCRIPT
 }
