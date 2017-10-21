@@ -33,6 +33,7 @@ spec:
           value: "##K8S_LOGS_TABLE##"
         - name: CLICKHOUSE_DATABASE
           value: "##CLICKHOUSE_DB##"
+        ##NO_PROXY##
         livenessProbe:
           tcpSocket:
             port: 9292

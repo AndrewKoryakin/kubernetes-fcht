@@ -88,6 +88,7 @@ spec:
           value: "##CLICKHOUSE_DB##"
         - name: K8S_LOG_TABLE
           value: "##K8S_LOGS_TABLE##"
+        ##NO_PROXY##
         resources:
           limits:
             memory: 2Gi

@@ -18,7 +18,7 @@ Optional arguments:
   --storage-size               storage size with optional IEC suffix
   --storage-namespace          set name of namespace from what copy secret
   --https                      disable Lets Encrypt for domains
-
+  --no_proxy                   set no_proxy variable to *
 Optional arguments:
   -h, --help                   output this message
 EOF
@@ -38,8 +38,8 @@ STORAGE_CLASS_NAME="rbd"
 STORAGE_SIZE="20Gi"
 CLICKHOUSE_DB="logs"
 K8S_LOGS_TABLE="logs"
-
-TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,storage-size:,storage-namespace:,https: \
+NO_PROXY=""
+TEMP=$(getopt -o i,u,d,h --long help,install,upgrade,delete,storage-class-name:,no_proxy,storage-size:,storage-namespace:,https: \
              -n 'ctl' -- "$@")
 
 eval set -- "$TEMP"
@@ -60,6 +60,8 @@ while true; do
       STORAGE_NAMESPACE="$2"; shift 2;;
     --https )
       HTTPS="$2"; shift 2;;
+    --no_proxy )
+      NO_PROXY="- name: no_proxy \n          value: \"*\""; shift ;;
     -h | --help )
       echo "$HELP_STRING"; exit 0 ;;
     -- )
@@ -84,7 +86,7 @@ SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
 git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
-#cp -r ${SRC_DIR} ${TMP_DIR} 
+#cp -r ${SRC_DIR} ${TMP_DIR}
 cd "$WORKDIR"
 
 function install {
@@ -137,7 +139,9 @@ function install {
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/clickhouse/clickhouse.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/fluentd/fluentd-ds.yaml
   sed -i -e "s/##K8S_LOGS_TABLE##/$K8S_LOGS_TABLE/g" manifests/loghouse/loghouse.yaml
-
+  #set no_proxy variable
+  sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/fluentd/fluentd-ds.yaml
+  sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/clickhouse/clickhouse.yaml
   if [ -n "$STORAGE_NAMESPACE" ] ;
   then
     export STORAGE_NAMESPACE=$STORAGE_NAMESPACE
@@ -173,6 +177,7 @@ function upgrade {
   CLICKHOUSE_PASS=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: CLICKHOUSE_PASS' -A1 | grep 'value: ' | awk '{print $NF}')
   CLICKHOUSE_DB=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: CLICKHOUSE_DB' -A1 | grep 'value: ' | awk '{print $NF}')
   K8S_LOGS_TABLE=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: K8S_LOGS_TABLE' -A1 | grep 'value: ' | awk '{print $NF}')
+  NO_PROXY=$(kubectl -n "$NAMESPACE" get deploy clickhouse-server -o yaml | grep 'name: no_proxy' -A1 | grep 'value: ' | awk '{print $NF}')
   CLICKHOUSE_PASS_SHA256=$(kubectl -n "$NAMESPACE" get cm clickhouse-config -o yaml | grep '<password_sha256_hex>' | cut -f2 -d'>' | cut -f1 -d'<')
   #Get tabix
   TABIX_HOST="tabix.$KUBE_HOST"
@@ -229,6 +234,10 @@ function upgrade {
     sed -i -e "s/##STORAGECLASS_USER_SECRET_VALUE##/$STORAGECLASS_USER_SECRET_VALUE/" manifests/clickhouse/storage_secret.yaml
     sed -i -e "s/##STORAGE_SIZE##/$STORAGE_SIZE/g" manifests/clickhouse/clickhouse.yaml
     sed -i -e "s/##STORAGE_CLASS_NAME##/$STORAGE_CLASS_NAME/g" manifests/clickhouse/clickhouse.yaml
+  fi
+  if [ -n "$NO_PROXY" ] ; then
+    sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/fluentd/fluentd-ds.yaml
+    sed -i -e "s/##NO_PROXY##/$NO_PROXY/g" manifests/clickhouse/clickhouse.yaml
   fi
   $UPGRADE_SCRIPT
 }
