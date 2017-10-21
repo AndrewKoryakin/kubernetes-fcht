@@ -86,9 +86,11 @@ SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "$TMP_DIR"
 cd "$TMP_DIR"
 #git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
-git clone --depth 1 https://github.com/qw1mb0/kubernetes-fcht.git
+git clone --depth 1 https://github.com/AndrewKoryakin/kubernetes-fcht.git
+
 #cp -r ${SRC_DIR} ${TMP_DIR}
 cd "$WORKDIR"
+git checkout koryakin_no_proxy
 
 function install {
   PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
